@@ -444,6 +444,8 @@ GameObject:
   - component: {fileID: 1640492049}
   - component: {fileID: 1640492048}
   - component: {fileID: 1640492047}
+  - component: {fileID: 1640492052}
+  - component: {fileID: 1640492051}
   m_Layer: 0
   m_Name: App
   m_TagString: Untagged
@@ -517,6 +519,40 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1640492051
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 783ddfafc0bad8e49a9c728ab84b270e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.Overlay
+  frontCamera: {fileID: 1640492049}
+  pose: {fileID: 1640492052}
+  lineColor: {r: 1, g: 1, b: 1, a: 1}
+  outOfRangeColor: {r: 1, g: 0.55, b: 0, a: 1}
+  minVisibility: 0.5
+  thickness: 0.012
+--- !u!114 &1640492052
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33e3ff4aae062ae45aa283c3d8f90b5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.PoseSmoother
+  poseTracker: {fileID: 1640492048}
+  frontCamera: {fileID: 1640492049}
+  minCutoff: 1
+  beta: 20
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

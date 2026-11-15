@@ -3,23 +3,65 @@ using Unity.InferenceEngine;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Sets up the "App" object in Main.unity with the camera, pose tracker and debug view and assigns
 /// their asset references. Safe to run more than once.
+/// Runs by itself after scripts compile when Main.unity is missing one of the components.
 /// Menu: Tools > Posture Check > Wire Main Scene. Batch: -executeMethod SceneWiring.Wire
 /// </summary>
+[InitializeOnLoad]
 public static class SceneWiring
 {
+    const string MainScene = "Assets/Scenes/Main.unity";
+
+    static readonly System.Type[] Components =
+        { typeof(FrontCamera), typeof(PoseTracker), typeof(PoseSmoother), typeof(Overlay), typeof(PoseDebugView) };
+
+    static SceneWiring()
+    {
+        EditorApplication.delayCall += () =>
+        {
+            if (Application.isBatchMode || EditorApplication.isPlayingOrWillChangePlaymode || !NeedsWiring()) return;
+            Debug.Log("Main.unity is missing components; wiring it.");
+            Wire();
+        };
+    }
+
+    /// <summary>True when the saved scene file does not reference every component script.</summary>
+    static bool NeedsWiring()
+    {
+        string path = System.IO.Path.GetFullPath(MainScene);
+        if (!System.IO.File.Exists(path)) return false;
+        string text = System.IO.File.ReadAllText(path);
+        foreach (var type in Components)
+        {
+            foreach (var guid in AssetDatabase.FindAssets($"t:MonoScript {type.Name}"))
+            {
+                var script = AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(guid));
+                if (script != null && script.GetClass() == type && !text.Contains(guid)) return true;
+            }
+        }
+        return false;
+    }
+
     [MenuItem("Tools/Posture Check/Wire Main Scene")]
     public static void Wire()
     {
-        var scene = EditorSceneManager.OpenScene("Assets/Scenes/Main.unity");
+        var scene = SceneManager.GetActiveScene();
+        if (scene.path != MainScene)
+        {
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            scene = EditorSceneManager.OpenScene(MainScene);
+        }
 
         var app = GameObject.Find("App");
         if (app == null) app = new GameObject("App");
         var cam = GetOrAdd<FrontCamera>(app);
         var pose = GetOrAdd<PoseTracker>(app);
+        var smoother = GetOrAdd<PoseSmoother>(app);
+        var overlay = GetOrAdd<Overlay>(app);
         var debug = GetOrAdd<PoseDebugView>(app);
 
         Set(cam, "uprightBlitShader", Load<Shader>("Assets/Shaders/UprightBlit.shader"));
@@ -29,6 +71,12 @@ public static class SceneWiring
         Set(pose, "landmarkerModel", Load<ModelAsset>("Assets/Models/pose_landmarks_detector_lite.onnx"));
         Set(pose, "anchorsCsv", Load<TextAsset>("Assets/Models/anchors.csv"));
         Set(pose, "imageToTensor", Load<ComputeShader>("Assets/Shaders/ImageToTensor.compute"));
+
+        Set(smoother, "poseTracker", pose);
+        Set(smoother, "frontCamera", cam);
+
+        Set(overlay, "frontCamera", cam);
+        Set(overlay, "pose", smoother);
 
         Set(debug, "frontCamera", cam);
         Set(debug, "poseTracker", pose);

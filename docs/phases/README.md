@@ -12,7 +12,7 @@ The app is built in three phases. Each phase leaves a working app, and each buil
 
 | Phase | Status |
 | --- | --- |
-| 1 Prototype | In progress: 1.1 project set up (test builds on phones pending) |
+| 1 Prototype | In progress: 1.1–1.3 work in the Editor (camera, BlazePose, posture line); phone builds pending |
 | 2 Core check | Not started |
 | 3 Full app | Not started |
 
