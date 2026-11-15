@@ -1,0 +1,34 @@
+// Samples a texture through an affine transform into an NHWC float tensor (values 0..1, sRGB).
+#pragma kernel CSMain
+
+Texture2D<float4> _Source;
+SamplerState sampler_linear_clamp;
+RWStructuredBuffer<float> _Output;
+
+uint _OutWidth;
+uint _OutHeight;
+float2 _SourceSize;   // source size in pixels
+float4 _Row0;         // tensor pixel -> source pixel (y up), row 0: (a, b, tx)
+float4 _Row1;         // row 1: (c, d, ty)
+
+[numthreads(8, 8, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _OutWidth || id.y >= _OutHeight) return;
+
+    float2 p = float2(id.x, id.y);
+    float2 src = float2(dot(_Row0.xy, p) + _Row0.z, dot(_Row1.xy, p) + _Row1.z);
+    float2 uv = src / _SourceSize;
+
+    bool inside = all(uv >= 0) && all(uv <= 1);
+    float3 c = inside ? _Source.SampleLevel(sampler_linear_clamp, uv, 0).rgb : 0;
+
+    // The project renders in linear space, so sampling an sRGB texture returns linear values.
+    // The models expect sRGB, so convert back.
+    c = c <= 0.0031308 ? 12.92 * c : 1.055 * pow(abs(c), 1.0 / 2.4) - 0.055;
+
+    uint o = (id.y * _OutWidth + id.x) * 3;
+    _Output[o + 0] = c.r;
+    _Output[o + 1] = c.g;
+    _Output[o + 2] = c.b;
+}
