@@ -10,19 +10,19 @@
 | Part | Frame | Notes |
 | --- | --- | --- |
 | Side-view scan | 4 | Child turns sideways; head-forward measurement |
-| Mascot copies the child's posture | 4 | Needs mascot mood/pose assets (sprite sheet or Lottie) |
+| Mascot copies the child's posture | 4 | Needs mascot mood/pose assets (sprite sheet or 3D model with animations) |
 | Guided poses with ghost outline and hold timer | 5 | Ghost drawn relative to body landmarks |
-| Walking check on stepping stones | 6 | Stones placed along the floor line from the ankles; cut first if time runs short |
+| Walking check on stepping stones | 6 | Stones placed on the scanned floor plane; cut first if time runs short |
 | All five measurements | 4, 6 | Shoulder tilt, hip tilt, head forward, knee alignment, foot angle |
 
-## Modules
+## Scripts
 
-| Module | Phase 2 work |
+| Script | Phase 2 work |
 | --- | --- |
-| `flow.ts` | Add states: `scanSide`, `poses`, `walk` (front scan now continues instead of ending) |
-| `measure.ts` | All five measurements; median over a 2 s still window; visibility > 0.6; "could not measure" after two failed tries |
-| `overlay.ts` | Ghost outline, hold-timer ring, stepping stones |
-| `mascot.ts` | Moods and posture copying |
+| `FlowController.cs` | Add states: `ScanSide`, `Poses`, `Walk` (front scan now continues instead of ending) |
+| `Measure.cs` | All five measurements; median over a 2 s still window; visibility > 0.6; "could not measure" after two failed tries |
+| `Overlay.cs` | Ghost outline, hold-timer ring, stepping stones placed in 3D on the scanned floor |
+| `Mascot.cs` | Moods and posture copying (2D sprites or a rigged 3D model, as the design team decides) |
 
 ## Measurements (plan section 6)
 
@@ -52,8 +52,8 @@ Thresholds stay as placeholders in `config.json` and are labelled "not clinicall
 
 ## Needs from the design team
 
-- Mascot moods (copying, happy, waving): sprite sheet or Lottie JSON
-- Ghost outline and stepping stones: PNG or SVG
+- Mascot moods (copying, happy, waving): sprite sheet, or 3D model with animations
+- Ghost outline and stepping stones: PNG or 3D model
 - Lines for side view, poses and walking
 
 ## Risks

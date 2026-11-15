@@ -12,21 +12,21 @@
 | Result logic | 7 | Flags from the five measurements |
 | Badge for finishing | 7 | The child sees only the badge, never the flags |
 | Parent result screen | 8 | "This is not a diagnosis." on every result |
-| "Find a specialist" list + doctor report | 8 | Printable HTML page (browser "Save as PDF") |
-| Saving results | 8 | IndexedDB/localStorage, angles and dates only |
+| "Find a specialist" list + doctor report | 8 | PDF made on the phone, shared through the share menu |
+| Saving results | 8 | JSON file in the app's data folder, angles and dates only |
 | Child profiles | 2 | Pick/add a child before the check |
-| Reminder + next-check date | 2, 8 | `.ics` calendar file; push only if installed as an app |
-| Voice lines and sound effects | All | Audio files named by line id |
+| Reminder + next-check date | 2, 8 | Local notifications (Unity Mobile Notifications package) |
+| Voice lines and sound effects | All | Audio files named by line id, played with `AudioSource` |
 
-## Modules
+## Scripts
 
-| Module | Phase 3 work |
+| Script | Phase 3 work |
 | --- | --- |
-| `result.ts` | Measurements → flags → result text |
-| `storage.ts` | Profiles, saved angles and dates |
-| `report.ts` | Parent screen, specialist list, printable report, `.ics` reminder |
-| `audio.ts` | Voice lines and sounds, keyed by line id |
-| `flow.ts` | Add states: `profile`, `badge`, `parentResult` |
+| `ResultLogic.cs` | Measurements → flags → result text |
+| `Storage.cs` | Profiles, saved angles and dates |
+| `Report.cs` | Parent screen, specialist list, PDF report, reminder notification |
+| `AudioPlayer.cs` | Voice lines and sounds, keyed by line id |
+| `FlowController.cs` | Add states: `Profile`, `Badge`, `ParentResult` |
 
 ## Result rules (plan section 6)
 
@@ -37,13 +37,13 @@
 
 ## Steps
 
-1. **3.1 Result logic** — `result.ts` with unit tests on flag rules.
+1. **3.1 Result logic** — `ResultLogic.cs` with Unity Test Framework tests on the flag rules.
 2. **3.2 Badge + parent result screen** — child/parent split.
 3. **3.3 Storage + child profiles**.
-4. **3.4 Report** — printable doctor report and specialist list.
-5. **3.5 Reminders** — next-check date and `.ics` file.
-6. **3.6 Voice and sound** — `audio.ts`, wire to mascot lines.
-7. **3.7 Optional packaging** — PWA install (or Capacitor) if needed.
+4. **3.4 Report** — PDF doctor report and specialist list.
+5. **3.5 Reminders** — next-check date and local notification.
+6. **3.6 Voice and sound** — `AudioPlayer.cs`, wire to mascot lines.
+7. **3.7 Store release (optional)** — App Store / Google Play listing if needed.
 
 ## Done when — usability test (5 adult testers, ~10 min each)
 
@@ -57,9 +57,9 @@ Plus: repeating one person's check 3 times gives the same flags.
 
 ## Needs from the design team
 
-- Badge: PNG or SVG
+- Badge: PNG (or 3D model)
 - Result, referral and report screens: Figma frames
-- Voice lines and sounds: MP3/M4A named by line id
+- Voice lines and sounds: MP3/WAV named by line id
 - Result and referral wording: sheet, reviewed by the lecturer
 
 ## Risks

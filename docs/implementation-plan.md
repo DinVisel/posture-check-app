@@ -1,22 +1,24 @@
 # Posture Check App — Implementation Plan
 
-Nov 15, 2026 · @Arda
+Nov 15, 2026 · @Arda · Revised Nov 15, 2026: stack changed from a web app to Unity, and the floor is scanned with the back camera before the check.
 
-This plan covers the whole app in three phases. **Phase 1 is the prototype: the first 30 seconds of the flow**, from "Start check" to the live posture line on the child's body. Every part below is marked **Prototype**, **Prototype (simplified)** or **Full app only**.
+This plan covers the whole app in three phases. **Phase 1 is the prototype: from "Start check" to the live posture line on the child's body**, including the floor scan before it. Every part below is marked **Prototype**, **Prototype (simplified)** or **Full app only**.
 
 Arda builds the app; the design team (İrem, Furkan, Bekir) owns all visuals, the mascot and the wording, so this plan makes no design decisions. The app and mascot names may change, so the plan says "the app" and "the mascot", and the code keeps both names in one config file.
 
 ## 1. Scope
 
-The prototype needs 8 of the 20 parts, two of them simplified; everything after the live posture line is full app only.
+The prototype needs 10 of the 22 parts, two of them simplified; everything after the live posture line is full app only.
 
 | Part | Storyboard frame | Phase | Prototype note |
 | --- | --- | --- | --- |
 | Names of app and mascot in one config file | All | Prototype | Placeholder names until the team decides |
 | Start screen with a "Start check" button | 2 | Prototype | Plain screen, final look comes later |
+| Floor scan with the back camera | 2–3 | Prototype | Parent points the phone at the spot where the child will stand |
+| Turn the phone around to the front camera | 3 | Prototype | Floor position carried over with the motion sensors |
 | Front camera, mirrored, full screen | 3 | Prototype |  |
 | Setup guidance until the whole body is in view | 3 | Prototype | Text hints: "step back", "move left" |
-| Floor marker placed under the child's feet | 3 | Prototype | Placed from the ankle landmarks |
+| Floor marker on the scanned spot | 3 | Prototype | Drawn in 3D on the scanned floor; falls back to the ankle landmarks if the scan fails |
 | Mascot on screen with a speech bubble | 3–8 | Prototype (simplified) | Placeholder image + text, no voice or animation |
 | Live posture line over the body | 4 | Prototype | The core of the demo |
 | Joints outside range turn orange | 4 | Prototype (simplified) | Front view, shoulder tilt only, placeholder threshold |
@@ -33,105 +35,125 @@ The prototype needs 8 of the 20 parts, two of them simplified; everything after 
 | Voice lines and sound effects | All | Full app only |  |
 | Saving results on the phone | 8 | Full app only |  |
 
-## 2. The prototype: the first 30 seconds
+## 2. The prototype: from "Start check" to the posture line
 
-The prototype ends when the posture line is drawn live on the child's body and the uneven shoulder turns orange. That is the core interaction from Frame 4, reached in about 30 seconds.
+The prototype ends when the posture line is drawn live on the child's body and the uneven shoulder turns orange. That is the core interaction from Frame 4, reached in about 45 seconds: about 15 seconds of floor scan, then the original 30-second child flow.
 
 | Time | What the user does | What the app does |
 | --- | --- | --- |
-| 0–5 s | Parent opens the link and taps "Start check" | Asks for the camera; the mascot greets the child in a speech bubble |
-| 5–15 s | Puts the phone on a shelf and steps back | Live mirrored camera; hints until the whole body is in view ("Step back", "Move left") |
-| 15–20 s | Child stands still | Floor marker appears under the feet; mascot: "Stand on the star!" |
-| 20–30 s | Child stands naturally, then lifts one shoulder | Posture line follows the body live; the shoulder line turns orange when tilted past the placeholder threshold |
+| 0–5 s | Parent opens the app and taps "Start check" | Asks for the camera; the mascot greets the parent in a speech bubble |
+| 5–15 s | Parent stands where the phone will go and points the back camera at the floor where the child will stand | Detects the floor, shows a preview of the star on it; "Floor found!" |
+| 15–20 s | Parent turns the phone around and puts it on the shelf, screen facing the room | Tracks the turn with the motion sensors, then switches to the mirrored front camera |
+| 20–30 s | Child steps into view | Hints until the whole body is in view ("Step back", "Move left"); star appears on the scanned spot; mascot: "Stand on the star!" |
+| 30–45 s | Child stands naturally, then lifts one shoulder | Posture line follows the body live; the shoulder line turns orange when tilted past the placeholder threshold |
+
+The scan step adds time and a phone-handling step to the flow. The prototype tests whether that is worth it: if the scan fails or the parent skips it, the app places the star from the ankle landmarks instead, so the child flow never breaks.
 
 **Done when**
 
-- [ ] The link opens on one Android phone (Chrome) and one iPhone (Safari) over HTTPS
+- [ ] The app installs and runs on one Android phone and one iPhone
+- [ ] The floor scan finds the floor within 10 seconds on a normal floor
+- [ ] After the turn, the star sits on the scanned spot: a person standing on it has the star under their feet
+- [ ] If the scan is skipped or fails, the star still appears under the feet from the ankle landmarks
 - [ ] The whole-body check stops hinting within 2 seconds of the body being fully in view
 - [ ] The posture line keeps up with normal movement on the demo phone
 - [ ] Lifting one shoulder turns the shoulder line orange; standing level turns it back
-- [ ] Swapping the mascot image, colours and names needs no code change (config file and asset folder only)
+- [ ] Swapping the mascot image, colours and names needs no code change (config file and content folder only)
 - [ ] Nothing is recorded or uploaded
 
 **Not in the prototype:** side view, guided poses, walking, results, parent screens, voice, saving. The code is structured so these slot in later without rewriting the prototype.
 
 ## 3. Tech approach and stack
 
-Build a mobile web app that opens from a link, with Google's MediaPipe Pose Landmarker tracking the body in the browser. The prototype uses the same stack as the full app, so nothing is thrown away.
+Build a native mobile app in Unity. The back camera scans the floor with AR Foundation (ARKit on iPhone, ARCore on Android); the front camera then tracks the body with the BlazePose model running on the phone. The prototype uses the same stack as the full app, so nothing is thrown away.
 
-**Why a web app:** one developer, no app store, and the whole team can open it on their own phones. It can be wrapped as an installable app later (a PWA, or Capacitor for the stores) if needed.
+**Why Unity:** the AR parts (star on the floor, ghost outline, stepping stones, 3D mascot) are easier to build and look better in a 3D engine, and one Unity project builds for both iPhone and Android. The team has a Mac for the iPhone builds.
 
-**Why the AR layer is drawn on the camera image:** the child must see the screen, so the app uses the front camera. Room-anchored AR (ARKit, ARCore, WebXR) works with the back camera, and Safari on iPhone does not support WebXR ([WebXR device support](https://abratabia.com/webxr-games/webxr-device-support.php)). So the marker, posture line and later the ghost and stones are placed relative to the body landmarks, with the feet giving the floor line.
+**Why scan with the back camera, then turn to the front:** the child must see the screen, so the check itself uses the front camera. But AR Foundation can only find the floor with the back camera, and neither ARKit nor ARCore tracks a body with the front camera (ARKit body tracking is back camera only; ARCore has none). So:
+
+1. The back camera finds the floor plane and the spot where the child will stand.
+2. When the parent turns the phone around, AR tracking stops, and the phone's motion sensor measures the turn.
+3. The floor plane and spot are carried into the front camera's view, assuming the phone is put down where it was during the scan.
+4. BlazePose on the front camera gives the 33 body landmarks; the posture line is drawn over the image and the star is drawn in 3D on the floor.
+
+The XR Interaction Toolkit is not used: it handles controller and hand input in XR scenes, not body tracking. It can be added later if a feature needs it.
 
 | Part | Tool | Prototype |
 | --- | --- | --- |
-| App | Vite + TypeScript, one HTML canvas over the video | Yes |
-| Body tracking | [MediaPipe Pose Landmarker](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/web_js) (`@mediapipe/tasks-vision`, lite model), 33 landmarks per frame | Yes |
-| Config | `config.json`: app name, mascot name, colours, text lines, thresholds | Yes |
-| Assets | `/assets` folder the design team fills; code loads by file name | Yes, with placeholders |
-| Hosting | GitHub Pages or Netlify (camera needs HTTPS) | Yes |
-| Sound and voice | Audio files from the design team | No |
-| Saving results | Browser IndexedDB or localStorage, angles and dates only | No |
-| Report export | Printable HTML page (browser "Save as PDF") | No |
-| Reminders | Calendar file (.ics) the parent adds; push notifications only if installed as an app | No |
+| Engine | Unity 6 LTS, URP, builds for iOS and Android | Yes |
+| Floor scan | AR Foundation + ARKit XR Plugin + ARCore XR Plugin, horizontal plane detection and raycast | Yes |
+| Turn tracking | Phone attitude sensor (Unity Input System `AttitudeSensor`) | Yes |
+| Front camera | `WebCamTexture`, front-facing, mirrored | Yes |
+| Body tracking | Unity Inference Engine (formerly Sentis) running BlazePose, 33 landmarks per frame (same numbering as MediaPipe). Fallback: MediaPipe Unity Plugin | Yes |
+| Config | `StreamingAssets/config.json`: app name, mascot name, colours, text lines, thresholds, camera field of view | Yes |
+| Assets | `Assets/Content` folder the design team fills; code loads by file name | Yes, with placeholders |
+| Builds | Android APK shared directly; iPhone through Xcode on the Mac, TestFlight for testers | Yes |
+| Sound and voice | Audio files from the design team, Unity `AudioSource` | No |
+| Saving results | JSON file in the app's data folder, angles and dates only | No |
+| Report export | PDF made on the phone, shared through the phone's share menu | No |
+| Reminders | Local notifications (Unity Mobile Notifications package) | No |
 
-Storyboard fix: MediaPipe tracks 33 landmarks, not 17. Change Frame 4 to "33 body points" or "key body points".
+Storyboard fix: BlazePose tracks 33 landmarks, not 17. Change Frame 4 to "33 body points" or "key body points".
 
 ## 4. App structure
 
-The app is one page with a state machine: each storyboard step is a state. The prototype builds the first three states and the modules under them, so later steps plug in without rewriting.
+The app is one Unity scene with a state machine: each storyboard step is a state. The prototype builds the first five states and the scripts under them, so later steps plug in without rewriting.
 
 &#91;embedded content: check flow · prototype part marked\]
 
-In the prototype, "Posture scan" is the front view only and ends there; the side view and everything after it are full app only.
+Prototype states: `Start` → `FloorScan` → `TurnPhone` → `Setup` → `ScanFront`. In the prototype, "Posture scan" is the front view only and ends there; the side view and everything after it are full app only.
 
-| Module | Job | Phase |
+| Script | Job | Phase |
 | --- | --- | --- |
-| `config.ts` | Loads names, colours, text lines and thresholds from `config.json` | Prototype |
-| `flow.ts` | State machine: current step, mascot line, when to move on | Prototype (3 states) |
-| `camera.ts` | Opens the front camera, mirrors the image | Prototype |
-| `pose.ts` | Runs MediaPipe on each video frame, returns the 33 landmarks | Prototype |
-| `overlay.ts` | Draws on the canvas: posture line and floor marker; later the ghost and stones | Prototype (line + marker) |
-| `mascot.ts` | Shows the mascot and its speech bubble; later moods and copying | Prototype (image + bubble) |
-| `measure.ts` | Angles, smoothing, visibility checks | Prototype (shoulder tilt only) |
-| `result.ts` | Turns measurements into flags and the result | Full app |
-| `storage.ts` | Saves angles and dates on the phone | Full app |
-| `report.ts` | Parent screen, specialist list, printable report | Full app |
-| `audio.ts` | Voice lines and sounds | Full app |
+| `AppConfig.cs` | Loads names, colours, text lines, thresholds and camera settings from `config.json` | Prototype |
+| `FlowController.cs` | State machine: current step, mascot line, when to move on | Prototype (5 states) |
+| `FloorScanner.cs` | Runs the AR session on the back camera, finds the floor and the child's spot | Prototype |
+| `TurnTracker.cs` | Measures the turn with the attitude sensor, moves the floor into the front camera's view | Prototype |
+| `FrontCamera.cs` | Opens the front camera, mirrors the image | Prototype |
+| `PoseTracker.cs` | Runs BlazePose on each camera frame, returns the 33 landmarks | Prototype |
+| `Overlay.cs` | Draws the posture line and the floor star; later the ghost and stones | Prototype (line + star) |
+| `Mascot.cs` | Shows the mascot and its speech bubble; later moods and copying | Prototype (image + bubble) |
+| `Measure.cs` | Angles, smoothing, visibility checks | Prototype (shoulder tilt only) |
+| `ResultLogic.cs` | Turns measurements into flags and the result | Full app |
+| `Storage.cs` | Saves angles and dates on the phone | Full app |
+| `Report.cs` | Parent screen, specialist list, PDF report | Full app |
+| `AudioPlayer.cs` | Voice lines and sounds | Full app |
 
-**Data and privacy (all phases):** video frames are processed on the phone and thrown away. Nothing is sent to a server; the full app saves only angles and dates.
+**Data and privacy (all phases):** camera frames are processed on the phone and thrown away. Nothing is sent to a server; the full app saves only angles and dates.
 
 ## 5. Handoff from the design team
 
-The code ships with neutral placeholders and loads every visual, name and line from the config file and the asset folder. The design team replaces those files; the developer makes no design choices.
+The code ships with neutral placeholders and loads every visual, name and line from the config file and the content folder. The design team replaces those files; the developer makes no design choices. A swap needs a new build, but no code change.
 
 | What the code needs | Format | Prototype | Placeholder until delivered |
 | --- | --- | --- | --- |
 | App name and mascot name | Text in `config.json` | Yes | "App", "Mascot" |
-| Mascot, idle pose | PNG or SVG, transparent background, about 512 px | Yes | Grey circle |
+| Mascot, idle pose | PNG, transparent background, about 512 px (or a 3D model, if the team chooses) | Yes | Grey circle |
 | Colours: UI, posture line normal, posture line outside range | Hex values in `config.json` | Yes | Grey, white, orange |
-| Floor marker | PNG or SVG | Yes | Plain ellipse |
-| Start screen and speech bubble layout | Figma frame | Yes | Plain button and text box |
-| Mascot's lines for the first 30 seconds | Sheet: line id, text | Yes | Storyboard text |
-| Mascot moods (copying, happy, waving) | Sprite sheet or Lottie JSON | No |  |
-| Ghost outline, stepping stones, badge | PNG or SVG | No |  |
+| Floor marker (star) | PNG with transparent background | Yes | Plain star shape |
+| Start, scan and turn-the-phone screens, speech bubble layout | Figma frames | Yes | Plain button, text and arrow |
+| Mascot's lines for the prototype flow | Sheet: line id, text | Yes | Storyboard text |
+| Mascot moods (copying, happy, waving) | Sprite sheet, or 3D model with animations | No |  |
+| Ghost outline, stepping stones, badge | PNG (or 3D model) | No |  |
 | Result, referral and report screens | Figma frames | No |  |
-| Voice lines and sounds | MP3 or M4A, named by line id | No |  |
+| Voice lines and sounds | MP3 or WAV, named by line id | No |  |
 | Result and referral wording | Sheet, reviewed by the lecturer | No |  |
 
-Agree file names in week 1 so a new asset is a file swap, not a code change.
+Agree file names and whether the mascot is 2D or 3D in week 1, so a new asset is a file swap, not a code change.
 
 ## 6. Measurements and result logic
 
 The full app measures five values; the prototype uses only shoulder tilt, live, to colour the line. If any value is past its threshold, the result says "signs found, we suggest a check-up". Thresholds are blanks: fill them from published sources and label them in the app as not clinically checked.
 
-| Measure | Frame | Landmarks (MediaPipe index) | How it is calculated | Flag when | Prototype |
+| Measure | Frame | Landmarks (BlazePose index) | How it is calculated | Flag when | Prototype |
 | --- | --- | --- | --- | --- | --- |
 | Shoulder tilt | 4, front | shoulders 11, 12 | Angle of the shoulder line from horizontal | over \[\_\_\]° | Yes, live colour only |
 | Hip tilt | 4, front | hips 23, 24 | Angle of the hip line from horizontal | over \[\_\_\]° | No |
 | Head forward | 4, side | ear 7 or 8, shoulder 11 or 12 | Ear's distance in front of the shoulder, divided by torso length | over \[\_\_\] | No |
 | Knee alignment | 4, front | hip, knee, ankle 23-25-27 and 24-26-28 | Angle at each knee | outside \[**\]–\[**\]° | No |
 | Foot angle when walking | 6 | heel 29, 30 and foot tip 31, 32 | Each foot's angle to the walking direction, averaged over steps | over \[\_\_\]° | No |
+
+"Horizontal" uses the phone's gravity direction from the motion sensor, so a phone leaning on the shelf does not tilt the measurement.
 
 **Rules for a reliable value (full app)**
 
@@ -155,11 +177,11 @@ Three phases, built in this order so each one leaves a working app. The dates ar
 
 | Phase | Builds | Done when |
 | --- | --- | --- |
-| 1 Prototype | Config and asset loading, start screen, camera, setup hints, floor marker, live posture line, shoulder tilt colour, mascot image + bubble | The 30-second checklist in section 2 passes |
+| 1 Prototype | Unity project and builds, config and content loading, start screen, floor scan, turn tracking, front camera, BlazePose, setup hints, floor star, live posture line, shoulder tilt colour, mascot image + bubble | The checklist in section 2 passes |
 | 2 Core check | Side-view scan, mascot copying the posture, guided poses with ghost and hold timer, walking check, all five measurements | One person can do the whole check and get stable values 3 times in a row |
-| 3 Full app | Result logic, badge, parent result screen, specialist list, printable report, saving, reminders, voice and sounds | The usability targets in section 8 are met |
+| 3 Full app | Result logic, badge, parent result screen, specialist list, PDF report, saving, reminders, voice and sounds | The usability targets in section 8 are met |
 
-**Order inside Phase 1:** camera and MediaPipe on both phones first (day 1–2), then the posture line, then setup hints and the floor marker, then config, placeholders and the start screen. If time runs short, the posture line is the one part the demo cannot lose.
+**Order inside Phase 1:** empty builds on both phones, then front camera and BlazePose on both phones (day 1–3), then the posture line and shoulder colour, then the floor scan and the turn, then setup hints and the star, then config, placeholders and the start screen. If time runs short, the posture line is the one part the demo cannot lose; the floor scan can fall back to the ankle-based star.
 
 **What the developer needs from the design team for Phase 1:** the "Prototype: yes" rows in section 5, by Nov 20.
 
@@ -167,13 +189,15 @@ Three phases, built in this order so each one leaves a working app. The dates ar
 
 Testers are adults (classmates, Hamit, family members) acting out the flow. Test with children only if the lecturer approves and a parent agrees and is present.
 
-**Phase 1, prototype (technical checks, about 1 hour)**
+**Phase 1, prototype (technical checks, about 1.5 hours)**
 
-- One Android phone in Chrome and one iPhone in Safari
+- One Android phone and one iPhone
 - Normal room light and a dim room
 - 2 m and 3 m from the phone; the whole body must fit
+- Floor scan on 3 floor types (plain, patterned, rug); note time to find the floor
+- Scan, turn and place the phone 10 times: note how far the star lands from the scanned spot
 - Lift one shoulder 10 times: the line turns orange each time and back again
-- 3 people of different heights do the first 30 seconds with no help
+- 3 people of different heights do the flow with no help; note whether the turn step confuses them
 
 **Phase 2 and 3, full app (usability test, 5 testers, about 10 minutes each)**
 
@@ -190,12 +214,17 @@ Testers are adults (classmates, Hamit, family members) acting out the flow. Test
 
 ## 9. Risks and fallbacks
 
-For the prototype the main risks are lag and the camera on iPhone; side-view tracking is the main full-app risk.
+For the prototype the main risks are lag, the camera switch and the star drifting after the turn; side-view tracking is the main full-app risk.
 
 | Risk | Phase | What goes wrong | Fallback |
 | --- | --- | --- | --- |
-| Tracking lags on older phones | Prototype | Line trails behind the body | Lite model, lower video resolution, demo on the fastest phone |
-| Camera will not start on iPhone | Prototype | No demo on iOS | HTTPS from day 1; test Safari in the first days |
+| Tracking lags on older phones | Prototype | Line trails behind the body | Lite BlazePose model, lower camera resolution, GPU inference, demo on the fastest phone |
+| Front-camera body tracking unavailable | Prototype | No posture line | Test BlazePose on both phones in the first days; switch to the MediaPipe Unity Plugin if needed |
+| Floor not found | Prototype | Scan never finishes | Hint to point at a lit, textured floor; "Skip" button; ankle-based star |
+| Star drifts after the turn | Prototype | Star is not under the feet | Ask to put the phone down where it was scanned; snap the star to the ankles when they are close; ankle-based star |
+| Turn step confuses parents | Prototype | Flow breaks, parent gives up | Clear arrow animation and line from the design team; measure in testing; drop the scan if it hurts more than it helps |
+| Camera switch is slow or fails | Prototype | Black screen after the turn | Stop the AR session fully before opening the front camera; retry once; show a "Tap to continue" button |
+| Front camera field of view unknown | Prototype | Star drawn too big or small | Field of view per test phone in `config.json`; tune on both phones |
 | Room too small for the whole body | Prototype | Setup never finishes | Hints to step back; allow landscape mode |
 | Shoulder line flickers orange | Prototype | Looks unreliable in the demo | Smooth the angle over about 0.5 s and add a small margin before switching colour |
 | Design assets arrive late | Prototype | Demo looks unfinished | Placeholders work on their own; swap files the day they arrive |
@@ -206,24 +235,26 @@ For the prototype the main risks are lag and the camera on iPhone; side-view tra
 
 ## 10. Prototype demo and deliverables
 
-The demo is the 30-second flow from section 2, done live with one teammate as the child.
+The demo is the flow from section 2, done live with one teammate as the child.
 
-1. Open the link on the demo phone and tap "Start check".
-2. Put the phone on a shelf; the teammate steps back until the hints stop.
-3. The floor marker appears under their feet and the mascot says to stand on it.
-4. They stand naturally: the posture line follows them.
-5. They lift one shoulder: the shoulder line turns orange. They level it: it turns back.
+1. Open the app on the demo phone and tap "Start check".
+2. Point the back camera at the floor where the teammate will stand until the star appears on it.
+3. Turn the phone around and put it on the shelf; the teammate steps back until the hints stop.
+4. The star is under their feet and the mascot says to stand on it.
+5. They stand naturally: the posture line follows them.
+6. They lift one shoulder: the shoulder line turns orange. They level it: it turns back.
 
 **Deliverables**
 
 | Phase | Deliverable |
 | --- | --- |
-| 1 Prototype | Working link (HTTPS), GitHub repository, 30-second screen recording as a backup for the live demo |
+| 1 Prototype | Android APK and iPhone build (TestFlight or installed from Xcode), GitHub repository, screen recording of the flow as a backup for the live demo |
 | 2 Core check | Side view, guided poses, walking check, measurements |
 | 3 Full app | Result and parent screens, specialist list, report, saving, reminders, voice; usability test notes |
 
 ## Sources
 
-- [Pose landmark detection guide for Web](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/web_js), Google AI Edge
+- [AR Foundation](https://docs.unity3d.com/Packages/com.unity.xr.arfoundation@6.0/manual/index.html), Unity: plane detection and raycasts
+- [Unity Inference Engine](https://docs.unity3d.com/Packages/com.unity.ai.inference@latest), Unity: running ML models such as BlazePose on the phone
 - [Pose landmark detection guide](https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker) (landmark list 0–32), Google AI Edge
-- [WebXR device support](https://abratabia.com/webxr-games/webxr-device-support.php), on Safari for iPhone not supporting WebXR
+- [ARKit body tracking](https://developer.apple.com/documentation/arkit/arbodytrackingconfiguration), Apple: back camera only
