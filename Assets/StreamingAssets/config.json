@@ -1,0 +1,40 @@
+{
+  "appName": "App",
+  "mascotName": "Mascot",
+
+  "colors": {
+    "ui": "#9E9E9E",
+    "postureLine": "#FFFFFF",
+    "postureLineOutOfRange": "#FF8C00"
+  },
+
+  "assets": {
+    "mascotIdle": "mascot_idle.png",
+    "floorMarker": "floor_marker.png"
+  },
+
+  "lines": {
+    "start.greeting": "Hi! I'm {mascot}. Let's check how you stand!",
+    "scan.pointAtFloor": "Point the camera at the floor where your child will stand.",
+    "scan.noFloor": "Point at the floor in a lit area.",
+    "scan.found": "Floor found!",
+    "turn.instruction": "Turn the phone around and put it here, screen facing the room.",
+    "setup.stepBack": "Step back",
+    "setup.moveLeft": "Move left",
+    "setup.moveRight": "Move right",
+    "setup.standOnStar": "Stand on the star!"
+  },
+
+  "thresholds": {
+    "_note": "Placeholder values, not clinically checked.",
+    "shoulderTiltDeg": 3.0,
+    "shoulderTiltMarginDeg": 0.5,
+    "smoothingSeconds": 0.5,
+    "minVisibility": 0.6
+  },
+
+  "camera": {
+    "_note": "Front camera vertical field of view in degrees; tune per test phone.",
+    "frontVerticalFovDeg": 60.0
+  }
+}

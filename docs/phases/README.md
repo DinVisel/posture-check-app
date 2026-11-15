@@ -1,4 +1,4 @@
-# Phases
+﻿# Phases
 
 The app is built in three phases. Each phase leaves a working app, and each builds on the code of the one before (nothing is thrown away). Source: [implementation plan](../implementation-plan.md), sections 1, 7 and 8.
 
@@ -12,7 +12,7 @@ The app is built in three phases. Each phase leaves a working app, and each buil
 
 | Phase | Status |
 | --- | --- |
-| 1 Prototype | Not started |
+| 1 Prototype | In progress: 1.1 project set up (test builds on phones pending) |
 | 2 Core check | Not started |
 | 3 Full app | Not started |
 
