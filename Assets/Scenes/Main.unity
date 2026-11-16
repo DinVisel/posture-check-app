@@ -446,6 +446,7 @@ GameObject:
   - component: {fileID: 1640492047}
   - component: {fileID: 1640492052}
   - component: {fileID: 1640492051}
+  - component: {fileID: 1640492053}
   m_Layer: 0
   m_Name: App
   m_TagString: Untagged
@@ -467,6 +468,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.PoseDebugView
   frontCamera: {fileID: 1640492049}
   poseTracker: {fileID: 1640492048}
+  measure: {fileID: 1640492053}
   visibilityThreshold: 0.6
   dotSize: 16
 --- !u!114 &1640492048
@@ -553,6 +555,21 @@ MonoBehaviour:
   frontCamera: {fileID: 1640492049}
   minCutoff: 1
   beta: 20
+--- !u!114 &1640492053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8eb0ebd47126ed84fbba4592e9e5ea5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.Measure
+  frontCamera: {fileID: 1640492049}
+  pose: {fileID: 1640492052}
+  overlay: {fileID: 1640492051}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Sets up the "App" object in Main.unity with the camera, pose tracker and debug view and assigns
+/// Sets up the "App" object in Main.unity with the camera, pose tracker, overlay, measurement and debug view and assigns
 /// their asset references. Safe to run more than once.
 /// Runs by itself after scripts compile when Main.unity is missing one of the components.
 /// Menu: Tools > Posture Check > Wire Main Scene. Batch: -executeMethod SceneWiring.Wire
@@ -17,7 +17,7 @@ public static class SceneWiring
     const string MainScene = "Assets/Scenes/Main.unity";
 
     static readonly System.Type[] Components =
-        { typeof(FrontCamera), typeof(PoseTracker), typeof(PoseSmoother), typeof(Overlay), typeof(PoseDebugView) };
+        { typeof(FrontCamera), typeof(PoseTracker), typeof(PoseSmoother), typeof(Overlay), typeof(Measure), typeof(PoseDebugView) };
 
     static SceneWiring()
     {
@@ -62,6 +62,7 @@ public static class SceneWiring
         var pose = GetOrAdd<PoseTracker>(app);
         var smoother = GetOrAdd<PoseSmoother>(app);
         var overlay = GetOrAdd<Overlay>(app);
+        var measure = GetOrAdd<Measure>(app);
         var debug = GetOrAdd<PoseDebugView>(app);
 
         Set(cam, "uprightBlitShader", Load<Shader>("Assets/Shaders/UprightBlit.shader"));
@@ -79,7 +80,12 @@ public static class SceneWiring
         Set(overlay, "pose", smoother);
 
         Set(debug, "frontCamera", cam);
+        Set(measure, "frontCamera", cam);
+        Set(measure, "pose", smoother);
+        Set(measure, "overlay", overlay);
+
         Set(debug, "poseTracker", pose);
+        Set(debug, "measure", measure);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);

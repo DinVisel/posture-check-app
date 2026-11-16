@@ -4,13 +4,14 @@ using UnityEngine.UI;
 namespace PostureCheck
 {
     /// <summary>
-    /// Debug overlay for step 1.2: draws all 33 landmarks and shows camera FPS, pose FPS and latency.
+    /// Debug overlay: draws all 33 landmarks and shows camera FPS, pose FPS, latency and shoulder tilt.
     /// Green = visible (above the visibility threshold), red = low visibility.
     /// </summary>
     public class PoseDebugView : MonoBehaviour
     {
         [SerializeField] FrontCamera frontCamera;
         [SerializeField] PoseTracker poseTracker;
+        [SerializeField] Measure measure;
         [Range(0, 1)] [SerializeField] float visibilityThreshold = 0.6f;
         [SerializeField] float dotSize = 16f;
 
@@ -94,7 +95,10 @@ namespace PostureCheck
                 $"Camera: {frontCamera.State}" + (frame != null ? $" {frame.width}x{frame.height}" : "") + $"  {m_CamFps:0} fps\n" +
                 $"Pose: {m_PoseFps:0} fps  latency {poseTracker.LatencyMs:0} ms\n" +
                 $"Detection score: {poseTracker.DetectionScore:0.00}  {(poseTracker.HasPose ? "tracking" : "no person")}\n" +
-                $"GPU: {SystemInfo.graphicsDeviceType}";
+                $"GPU: {SystemInfo.graphicsDeviceType}" +
+                (measure == null ? "" :
+                    "\nShoulder tilt: " +(measure.Valid ? $"{measure.TiltDeg:+0.0;-0.0}°" + (measure.OutOfRange ? " OUT OF RANGE" : "") : "shoulders not visible") +
+                    $"  (down from {measure.DownSource})");
         }
     }
 }
