@@ -10,7 +10,8 @@ using UnityEngine.XR.Management;
 /// <summary>
 /// AR settings the floor scan needs (step 1.5). Runs by itself after scripts compile when
 /// something is missing, and from Tools > Posture Check > Apply Project Settings.
-/// - URP renderers get the "AR Background" feature, without which the back camera image is black.
+/// - URP renderers get the "AR Background" feature, without which the back camera image is black,
+///   and the "AR Command Buffer Support" feature that ARCore needs with Vulkan (otherwise also black).
 /// - XR does not start with the app: the floor scan starts it and stops it before the front camera opens.
 /// - XR Simulation is the PC (Editor) loader, so the scan can be tried in Play mode without a phone.
 /// </summary>
@@ -36,7 +37,7 @@ public static class ArSetup
         foreach (var path in Renderers)
         {
             var data = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(path);
-            if (data != null && !data.rendererFeatures.Any(f => f is ARBackgroundRendererFeature)) return true;
+            if (data != null && (!Has<ARBackgroundRendererFeature>(data) || !Has<ARCommandBufferSupportRendererFeature>(data))) return true;
         }
         if (!EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.settingsKey, out XRGeneralSettingsPerBuildTarget perTarget)
             || perTarget == null) return false; // ProjectSetup has not run yet
@@ -50,7 +51,11 @@ public static class ArSetup
 
     public static void Apply()
     {
-        foreach (var path in Renderers) AddBackgroundFeature(path);
+        foreach (var path in Renderers)
+        {
+            AddFeature<ARBackgroundRendererFeature>(path);
+            AddFeature<ARCommandBufferSupportRendererFeature>(path);
+        }
 
         if (EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.settingsKey, out XRGeneralSettingsPerBuildTarget perTarget)
             && perTarget != null)
@@ -71,14 +76,17 @@ public static class ArSetup
         AssetDatabase.SaveAssets();
     }
 
-    static void AddBackgroundFeature(string path)
+    static bool Has<T>(ScriptableRendererData data) where T : ScriptableRendererFeature =>
+        data.rendererFeatures.Any(f => f is T);
+
+    static void AddFeature<T>(string path) where T : ScriptableRendererFeature
     {
         var data = AssetDatabase.LoadAssetAtPath<ScriptableRendererData>(path);
-        if (data == null || data.rendererFeatures.Any(f => f is ARBackgroundRendererFeature)) return;
+        if (data == null || Has<T>(data)) return;
 
         // Same steps as the renderer's "Add Renderer Feature" button: sub-asset + feature list + id map.
-        var feature = ScriptableObject.CreateInstance<ARBackgroundRendererFeature>();
-        feature.name = "ARBackgroundRendererFeature";
+        var feature = ScriptableObject.CreateInstance<T>();
+        feature.name = typeof(T).Name;
         AssetDatabase.AddObjectToAsset(feature, data);
         AssetDatabase.TryGetGUIDAndLocalFileIdentifier(feature, out _, out long localId);
 
