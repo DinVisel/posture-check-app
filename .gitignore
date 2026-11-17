@@ -51,3 +51,6 @@ sysinfo.txt
 Thumbs.db
 desktop.ini
 *.log
+
+# Unity temp files
+/.utmp/
