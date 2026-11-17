@@ -4,15 +4,15 @@ using UnityEngine;
 namespace PostureCheck
 {
     /// <summary>
-    /// Runs the check's states in order. Step 1.5 has two: the floor scan with the back camera,
-    /// then the front camera with pose tracking. Step 1.6 adds "turn the phone" in between,
-    /// step 1.8 the start screen and setup.
+    /// Runs the check's states in order: floor scan (back camera) → turn the phone → front camera
+    /// with pose tracking. Step 1.7 adds setup hints, step 1.8 the start screen.
     /// </summary>
     public class FlowController : MonoBehaviour
     {
-        public enum State { FloorScan, ScanFront }
+        public enum State { FloorScan, TurnPhone, ScanFront }
 
         [SerializeField] FloorScanner floorScanner;
+        [SerializeField] TurnTracker turnTracker;
         [SerializeField] FrontCamera frontCamera;
         [Tooltip("The scene camera; switched off while the AR camera draws the back camera image.")]
         [SerializeField] Camera sceneCamera;
@@ -20,9 +20,14 @@ namespace PostureCheck
         [SerializeField] bool skipFloorScanInEditor;
 
         public State Current { get; private set; }
+        /// <summary>The scanned floor in the front camera's view; not valid if the scan was skipped.</summary>
+        public TurnTracker.FloorInFront Floor { get; private set; }
 
         IEnumerator Start()
         {
+            // Portrait only, so the back and front camera views and the sensors share the same axes.
+            Screen.orientation = ScreenOrientation.Portrait;
+
             bool scan = !(Application.isEditor && skipFloorScanInEditor);
             if (scan)
             {
@@ -31,8 +36,12 @@ namespace PostureCheck
                 yield return floorScanner.Run();
                 var r = floorScanner.Result;
                 Debug.Log($"Flow: floor scan {r.outcome}" + (r.secondsToFindFloor >= 0 ? $", floor after {r.secondsToFindFloor:0.0} s" : ""));
-                yield return floorScanner.Shutdown();
+                yield return floorScanner.Shutdown(); // AR fully stopped before the front camera opens
                 if (sceneCamera != null) sceneCamera.enabled = true;
+
+                Current = State.TurnPhone;
+                yield return turnTracker.Run(r);
+                Floor = turnTracker.Floor;
             }
 
             Current = State.ScanFront;

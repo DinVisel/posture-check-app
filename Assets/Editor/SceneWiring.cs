@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Sets up the "App" object in Main.unity with the camera, pose tracker, overlay, measurement, debug view, floor scanner and flow and assigns
+/// Sets up the "App" object in Main.unity with the camera, pose tracker, overlay, measurement, debug view, floor scanner, turn tracker and flow and assigns
 /// their asset references. Safe to run more than once.
 /// Runs by itself after scripts compile when Main.unity is missing one of the components.
 /// Menu: Tools > Posture Check > Wire Main Scene. Batch: -executeMethod SceneWiring.Wire
@@ -18,7 +18,7 @@ public static class SceneWiring
 
     static readonly System.Type[] Components =
         { typeof(FrontCamera), typeof(PoseTracker), typeof(PoseSmoother), typeof(Overlay), typeof(Measure), typeof(PoseDebugView),
-          typeof(FloorScanner), typeof(FlowController) };
+          typeof(FloorScanner), typeof(TurnTracker), typeof(FlowController) };
 
     static SceneWiring()
     {
@@ -66,6 +66,7 @@ public static class SceneWiring
         var measure = GetOrAdd<Measure>(app);
         var debug = GetOrAdd<PoseDebugView>(app);
         var scanner = GetOrAdd<FloorScanner>(app);
+        var turn = GetOrAdd<TurnTracker>(app);
         var flow = GetOrAdd<FlowController>(app);
 
         Set(cam, "uprightBlitShader", Load<Shader>("Assets/Shaders/UprightBlit.shader"));
@@ -93,6 +94,7 @@ public static class SceneWiring
         Set(scanner, "floorMarker", Load<Texture2D>("Assets/Content/floor_marker.png"));
 
         Set(flow, "floorScanner", scanner);
+        Set(flow, "turnTracker", turn);
         Set(flow, "frontCamera", cam);
         var sceneCamera = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
         Set(flow, "sceneCamera", sceneCamera);

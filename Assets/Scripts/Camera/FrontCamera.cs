@@ -52,11 +52,24 @@ namespace PostureCheck
             var device = FindFrontCamera();
             if (device == null) { State = CameraState.NoCamera; Debug.LogWarning("No camera found"); yield break; }
 
-            m_Cam = new WebCamTexture(device.Value.name, requestedSize.x, requestedSize.y, requestedFps);
-            m_Cam.Play();
             m_Blit = new Material(uprightBlitShader);
             CreateView();
-            State = CameraState.Running;
+
+            // Right after the AR session stops, the camera can still be busy: retry once if no image arrives.
+            for (int attempt = 1; attempt <= 2; attempt++)
+            {
+                m_Cam = new WebCamTexture(device.Value.name, requestedSize.x, requestedSize.y, requestedFps);
+                m_Cam.Play();
+                float deadline = Time.realtimeSinceStartup + 3f;
+                while (m_Cam.width < 32 && Time.realtimeSinceStartup < deadline) yield return null;
+                if (m_Cam.width >= 32) break;
+                Debug.LogWarning($"FrontCamera: no image after attempt {attempt}");
+                m_Cam.Stop();
+                Destroy(m_Cam);
+                m_Cam = null;
+                if (attempt == 1) yield return new WaitForSecondsRealtime(0.5f);
+            }
+            State = m_Cam != null ? CameraState.Running : CameraState.NoCamera;
         }
 
         IEnumerator RequestPermission()
