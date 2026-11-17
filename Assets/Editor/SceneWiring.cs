@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Sets up the "App" object in Main.unity with the camera, pose tracker, overlay, measurement and debug view and assigns
+/// Sets up the "App" object in Main.unity with the camera, pose tracker, overlay, measurement, debug view, floor scanner and flow and assigns
 /// their asset references. Safe to run more than once.
 /// Runs by itself after scripts compile when Main.unity is missing one of the components.
 /// Menu: Tools > Posture Check > Wire Main Scene. Batch: -executeMethod SceneWiring.Wire
@@ -17,7 +17,8 @@ public static class SceneWiring
     const string MainScene = "Assets/Scenes/Main.unity";
 
     static readonly System.Type[] Components =
-        { typeof(FrontCamera), typeof(PoseTracker), typeof(PoseSmoother), typeof(Overlay), typeof(Measure), typeof(PoseDebugView) };
+        { typeof(FrontCamera), typeof(PoseTracker), typeof(PoseSmoother), typeof(Overlay), typeof(Measure), typeof(PoseDebugView),
+          typeof(FloorScanner), typeof(FlowController) };
 
     static SceneWiring()
     {
@@ -64,6 +65,8 @@ public static class SceneWiring
         var overlay = GetOrAdd<Overlay>(app);
         var measure = GetOrAdd<Measure>(app);
         var debug = GetOrAdd<PoseDebugView>(app);
+        var scanner = GetOrAdd<FloorScanner>(app);
+        var flow = GetOrAdd<FlowController>(app);
 
         Set(cam, "uprightBlitShader", Load<Shader>("Assets/Shaders/UprightBlit.shader"));
 
@@ -79,13 +82,20 @@ public static class SceneWiring
         Set(overlay, "frontCamera", cam);
         Set(overlay, "pose", smoother);
 
-        Set(debug, "frontCamera", cam);
         Set(measure, "frontCamera", cam);
         Set(measure, "pose", smoother);
         Set(measure, "overlay", overlay);
 
+        Set(debug, "frontCamera", cam);
         Set(debug, "poseTracker", pose);
         Set(debug, "measure", measure);
+
+        Set(scanner, "floorMarker", Load<Texture2D>("Assets/Content/floor_marker.png"));
+
+        Set(flow, "floorScanner", scanner);
+        Set(flow, "frontCamera", cam);
+        var sceneCamera = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
+        Set(flow, "sceneCamera", sceneCamera);
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);

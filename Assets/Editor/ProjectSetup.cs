@@ -78,6 +78,7 @@ public static class ProjectSetup
 
         EnableLoader(BuildTargetGroup.Android, "UnityEngine.XR.ARCore.ARCoreLoader");
         EnableLoader(BuildTargetGroup.iOS, "UnityEngine.XR.ARKit.ARKitLoader");
+        ArSetup.Apply();
     }
 
     // GetOrCreateSettings returns an in-memory object the first time; it must be an asset before

@@ -21,9 +21,9 @@ namespace PostureCheck
         [Tooltip("Extra clockwise rotation (0/90/180/270) if a phone reports its camera angle wrongly.")]
         [SerializeField] int extraRotation;
 
-        public enum CameraState { Starting, Running, PermissionDenied, NoCamera }
+        public enum CameraState { Idle, Starting, Running, PermissionDenied, NoCamera }
 
-        public CameraState State { get; private set; } = CameraState.Starting;
+        public CameraState State { get; private set; } = CameraState.Idle;
         /// <summary>Upright, unmirrored camera image (sRGB). Null until the first frame.</summary>
         public RenderTexture Frame { get; private set; }
         /// <summary>Increases by one every time <see cref="Frame"/> gets a new camera image.</summary>
@@ -36,7 +36,15 @@ namespace PostureCheck
         int m_Rotation = -1;
         bool m_FlipY;
 
-        IEnumerator Start()
+        /// <summary>Opens the front camera. Called by the flow once the back camera (AR) is released.</summary>
+        public void Begin()
+        {
+            if (State != CameraState.Idle) return;
+            State = CameraState.Starting;
+            StartCoroutine(Open());
+        }
+
+        IEnumerator Open()
         {
             yield return RequestPermission();
             if (State == CameraState.PermissionDenied) yield break;

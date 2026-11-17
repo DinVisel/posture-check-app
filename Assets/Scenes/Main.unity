@@ -447,6 +447,8 @@ GameObject:
   - component: {fileID: 1640492052}
   - component: {fileID: 1640492051}
   - component: {fileID: 1640492053}
+  - component: {fileID: 1640492055}
+  - component: {fileID: 1640492054}
   m_Layer: 0
   m_Name: App
   m_TagString: Untagged
@@ -570,6 +572,43 @@ MonoBehaviour:
   frontCamera: {fileID: 1640492049}
   pose: {fileID: 1640492052}
   overlay: {fileID: 1640492051}
+--- !u!114 &1640492054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: deb6769adf3923f48990d570a3ed2908, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.FlowController
+  floorScanner: {fileID: 1640492055}
+  frontCamera: {fileID: 1640492049}
+  sceneCamera: {fileID: 330585545}
+  skipFloorScanInEditor: 0
+--- !u!114 &1640492055
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97d60d3c44f84e44e838b2f21bea002d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.FloorScanner
+  floorMarker: {fileID: 2800000, guid: b5515214753856341998c2994efb1fc7, type: 3}
+  starSize: 0.5
+  floorTolerance: 0.25
+  noFloorHintSeconds: 5
+  sessionStartTimeout: 30
+  linePointAtFloor: Point the camera at the floor where your child will stand.
+  lineNoFloor: Point at the floor in a lit area.
+  lineFound: Floor found!
+  lineUnavailable: Floor scan is not available on this phone. Skipping it.
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
