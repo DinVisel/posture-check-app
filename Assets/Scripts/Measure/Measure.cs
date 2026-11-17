@@ -24,6 +24,24 @@ namespace PostureCheck
         /// <summary>Where "down" comes from: "gravity", "accelerometer" or "screen" (no sensor).</summary>
         public string DownSource { get; private set; } = "screen";
 
+        public enum SetupHint { None, StepIn, StepBack, MoveLeft, MoveRight }
+
+        [Tooltip("Head and ankles must be this far inside the screen edges (fraction of screen height).")]
+        [SerializeField] float edgeMargin = 0.03f;
+        [Tooltip("Body centre further than this from the screen centre (fraction of width) gives a move hint.")]
+        [SerializeField] float centreTolerance = 0.2f;
+        [Tooltip("Seconds a new body-in-view result must hold before it counts (stops flicker).")]
+        [SerializeField] float bodySettleSeconds = 0.5f;
+
+        /// <summary>True when the head and both ankles are visible and on screen (settled).</summary>
+        public bool BodyInView { get; private set; }
+        /// <summary>What the child should do to get the whole body in view (settled).</summary>
+        public SetupHint Hint { get; private set; } = SetupHint.StepIn;
+
+        bool m_RawInView;
+        SetupHint m_RawHint = SetupHint.StepIn;
+        float m_InViewTimer, m_HintTimer;
+
         int m_LastVersion = -1;
         float m_LastTime;
         bool m_HasSmoothed;
@@ -38,6 +56,7 @@ namespace PostureCheck
         void Update()
         {
             UpdateDown();
+            UpdateBody();
 
             if (pose.Version == m_LastVersion) return;
             m_LastVersion = pose.Version;
@@ -82,6 +101,46 @@ namespace PostureCheck
             if (OutOfRange) { if (abs < t.shoulderTiltDeg - t.shoulderTiltMarginDeg) OutOfRange = false; }
             else if (abs > t.shoulderTiltDeg) OutOfRange = true;
             overlay.ShoulderOutOfRange = OutOfRange;
+        }
+
+        /// <summary>
+        /// Whole-body check: nose (0) and both ankles (27, 28) visible and inside the visible screen
+        /// area. Hints use screen positions, which are already mirrored: a child shown on the left of
+        /// the screen is on their own left, so they are told to move right.
+        /// </summary>
+        void UpdateBody()
+        {
+            var raw = SetupHint.StepIn;
+            bool inView = false;
+            if (pose.HasPose && frontCamera.Frame != null)
+            {
+                float minVis = AppConfig.Current.thresholds.minVisibility;
+                float margin = edgeMargin * Screen.height;
+                bool OnScreen(BodyPoint p)
+                {
+                    var lm = pose[p];
+                    var s = frontCamera.FrameToScreen(lm.position);
+                    return lm.visibility >= minVis && s.x > margin && s.x < Screen.width - margin &&
+                           s.y > margin && s.y < Screen.height - margin;
+                }
+                inView = OnScreen(BodyPoint.Nose) && OnScreen(BodyPoint.LeftAnkle) && OnScreen(BodyPoint.RightAnkle);
+
+                var hips = (frontCamera.FrameToScreen(pose[BodyPoint.LeftHip].position) +
+                            frontCamera.FrameToScreen(pose[BodyPoint.RightHip].position)) * 0.5f;
+                float dx = hips.x / Screen.width - 0.5f;
+                if (dx < -centreTolerance) raw = SetupHint.MoveRight;
+                else if (dx > centreTolerance) raw = SetupHint.MoveLeft;
+                else raw = inView ? SetupHint.None : SetupHint.StepBack;
+            }
+
+            float dt = Time.unscaledDeltaTime;
+            m_InViewTimer = inView == m_RawInView ? m_InViewTimer + dt : 0f;
+            m_RawInView = inView;
+            if (m_InViewTimer >= bodySettleSeconds) BodyInView = inView;
+
+            m_HintTimer = raw == m_RawHint ? m_HintTimer + dt : 0f;
+            m_RawHint = raw;
+            if (m_HintTimer >= bodySettleSeconds) Hint = raw;
         }
 
         /// <summary>Gravity direction on screen (x right, y up), unit length.</summary>

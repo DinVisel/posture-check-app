@@ -21,7 +21,15 @@ namespace PostureCheck
             public float minVisibility = 0.6f;
         }
 
+        [Serializable]
+        public class CameraSettings
+        {
+            /// <summary>Front camera vertical field of view (degrees) of the upright portrait image; tune per phone.</summary>
+            public float frontVerticalFovDeg = 60f;
+        }
+
         public ThresholdSettings thresholds = new();
+        public CameraSettings camera = new();
 
         static AppConfig s_Current;
 
