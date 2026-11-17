@@ -37,6 +37,7 @@
 *.mdb.meta
 
 # Build outputs
+/[Bb]uilds/
 *.apk
 *.aab
 *.unitypackage

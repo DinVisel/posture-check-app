@@ -98,7 +98,8 @@ namespace PostureCheck
                 $"GPU: {SystemInfo.graphicsDeviceType}" +
                 (measure == null ? "" :
                     "\nShoulder tilt: " +(measure.Valid ? $"{measure.TiltDeg:+0.0;-0.0}°" + (measure.OutOfRange ? " OUT OF RANGE" : "") : "shoulders not visible") +
-                    $"  (down from {measure.DownSource})");
+                    $"  (down from {measure.DownSource})" +
+                    $"\nBody: {(measure.BodyInView ? "in view" : "not in view")}, hint {measure.Hint}\n{measure.BodyDebug}");
         }
     }
 }

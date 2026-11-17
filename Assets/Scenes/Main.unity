@@ -449,6 +449,10 @@ GameObject:
   - component: {fileID: 1640492053}
   - component: {fileID: 1640492055}
   - component: {fileID: 1640492054}
+  - component: {fileID: 1640492059}
+  - component: {fileID: 1640492058}
+  - component: {fileID: 1640492057}
+  - component: {fileID: 1640492056}
   m_Layer: 0
   m_Name: App
   m_TagString: Untagged
@@ -537,8 +541,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.Overlay
   frontCamera: {fileID: 1640492049}
   pose: {fileID: 1640492052}
-  lineColor: {r: 1, g: 1, b: 1, a: 1}
-  outOfRangeColor: {r: 1, g: 0.55, b: 0, a: 1}
   minVisibility: 0.5
   thickness: 0.012
 --- !u!114 &1640492052
@@ -572,6 +574,9 @@ MonoBehaviour:
   frontCamera: {fileID: 1640492049}
   pose: {fileID: 1640492052}
   overlay: {fileID: 1640492051}
+  edgeMargin: 0.03
+  centreTolerance: 0.2
+  bodySettleSeconds: 0.5
 --- !u!114 &1640492054
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -585,7 +590,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.FlowController
   floorScanner: {fileID: 1640492055}
+  turnTracker: {fileID: 1640492059}
   frontCamera: {fileID: 1640492049}
+  measure: {fileID: 1640492053}
+  floorStar: {fileID: 1640492058}
+  mascot: {fileID: 1640492057}
+  startScreen: {fileID: 1640492056}
   sceneCamera: {fileID: 330585545}
   skipFloorScanInEditor: 0
 --- !u!114 &1640492055
@@ -600,15 +610,69 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 97d60d3c44f84e44e838b2f21bea002d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.FloorScanner
-  floorMarker: {fileID: 2800000, guid: b5515214753856341998c2994efb1fc7, type: 3}
   starSize: 0.5
   floorTolerance: 0.25
   noFloorHintSeconds: 5
   sessionStartTimeout: 30
-  linePointAtFloor: Point the camera at the floor where your child will stand.
-  lineNoFloor: Point at the floor in a lit area.
-  lineFound: Floor found!
-  lineUnavailable: Floor scan is not available on this phone. Skipping it.
+--- !u!114 &1640492056
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0e71030a1626e44eaa4e09b7cb2f559, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.StartScreen
+--- !u!114 &1640492057
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c8252b3959aa8b4fa3a24846ccee228, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.Mascot
+--- !u!114 &1640492058
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e73e515ebf20ca46a68d1a7d7717b77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.FloorStar
+  frontCamera: {fileID: 1640492049}
+  pose: {fileID: 1640492052}
+  flow: {fileID: 1640492054}
+  starSize: 0.5
+  snapDistance: 0.6
+  onStarDistance: 0.3
+  fallbackWidthOfBody: 0.35
+--- !u!114 &1640492059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1640492046}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4efc028b646c124c928a627d28de5d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostureCheck.TurnTracker
+  minTurnDeg: 120
+  stillSeconds: 1
+  stillRate: 0.15
+  maxTurnErrorDeg: 45
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -37,6 +37,8 @@ namespace PostureCheck
         public bool BodyInView { get; private set; }
         /// <summary>What the child should do to get the whole body in view (settled).</summary>
         public SetupHint Hint { get; private set; } = SetupHint.StepIn;
+        /// <summary>Debug: why the body check passes or fails, per point.</summary>
+        public string BodyDebug { get; private set; } = "";
 
         bool m_RawInView;
         SetupHint m_RawHint = SetupHint.StepIn;
@@ -112,18 +114,26 @@ namespace PostureCheck
         {
             var raw = SetupHint.StepIn;
             bool inView = false;
+            BodyDebug = "no person";
             if (pose.HasPose && frontCamera.Frame != null)
             {
                 float minVis = AppConfig.Current.thresholds.minVisibility;
                 float margin = edgeMargin * Screen.height;
-                bool OnScreen(BodyPoint p)
+                var debug = new System.Text.StringBuilder();
+                bool OnScreen(BodyPoint p, string label)
                 {
                     var lm = pose[p];
                     var s = frontCamera.FrameToScreen(lm.position);
-                    return lm.visibility >= minVis && s.x > margin && s.x < Screen.width - margin &&
-                           s.y > margin && s.y < Screen.height - margin;
+                    bool visible = lm.visibility >= minVis;
+                    bool inside = s.x > margin && s.x < Screen.width - margin && s.y > margin && s.y < Screen.height - margin;
+                    debug.Append($"{label} {lm.visibility:0.00}{(visible ? "" : " low")}{(inside ? "" : s.y <= margin ? " below" : s.y >= Screen.height - margin ? " above" : " side")}  ");
+                    return visible && inside;
                 }
-                inView = OnScreen(BodyPoint.Nose) && OnScreen(BodyPoint.LeftAnkle) && OnScreen(BodyPoint.RightAnkle);
+                bool nose = OnScreen(BodyPoint.Nose, "nose");
+                bool leftAnkle = OnScreen(BodyPoint.LeftAnkle, "L ankle");
+                bool rightAnkle = OnScreen(BodyPoint.RightAnkle, "R ankle");
+                inView = nose && leftAnkle && rightAnkle;
+                BodyDebug = debug.ToString();
 
                 var hips = (frontCamera.FrameToScreen(pose[BodyPoint.LeftHip].position) +
                             frontCamera.FrameToScreen(pose[BodyPoint.RightHip].position)) * 0.5f;
