@@ -34,7 +34,6 @@ namespace PostureCheck
             public float secondsToFindFloor;
         }
 
-        [SerializeField] Texture2D floorMarker;
         [Tooltip("Width of the star on the floor, metres.")]
         [SerializeField] float starSize = 0.5f;
         [Tooltip("Planes higher than the lowest one by more than this are ignored (tables, sofas).")]
@@ -43,11 +42,7 @@ namespace PostureCheck
         [Tooltip("Seconds to wait for the AR session to start (includes installing ARCore on Android).")]
         [SerializeField] float sessionStartTimeout = 30f;
 
-        // Text lines from config.json ("scan.*"); step 1.8 reads them from the file.
-        [SerializeField] string linePointAtFloor = "Point the camera at the floor where your child will stand.";
-        [SerializeField] string lineNoFloor = "Point at the floor in a lit area.";
-        [SerializeField] string lineFound = "Floor found!";
-        [SerializeField] string lineUnavailable = "Floor scan is not available on this phone. Skipping it.";
+        static string L(string key) => AppConfig.Current.Line(key);
 
         public FloorResult Result { get; private set; }
         public bool Running { get; private set; }
@@ -71,7 +66,7 @@ namespace PostureCheck
             Result = new FloorResult { outcome = Outcome.None, secondsToFindFloor = -1f };
             Ui.EnsureEventSystem();
             BuildUi();
-            m_Hint.text = linePointAtFloor;
+            m_Hint.text = L("scan.pointAtFloor");
 
             yield return StartAr();
             if (m_ArRoot == null || !SessionStarted())
@@ -99,9 +94,9 @@ namespace PostureCheck
                 m_UseButton.interactable = hit;
                 if (hit) PlaceStar(pose.position, up);
 
-                if (hit) m_Hint.text = lineFound;
-                else if (!anyFloor && Time.realtimeSinceStartup - start > noFloorHintSeconds) m_Hint.text = lineNoFloor;
-                else m_Hint.text = linePointAtFloor;
+                if (hit) m_Hint.text = L("scan.found");
+                else if (!anyFloor && Time.realtimeSinceStartup - start > noFloorHintSeconds) m_Hint.text = L("scan.noFloor");
+                else m_Hint.text = L("scan.pointAtFloor");
 
                 if (m_Choice == Outcome.Found && hit)
                 {
@@ -128,7 +123,7 @@ namespace PostureCheck
         IEnumerator Unavailable()
         {
             Debug.LogWarning("FloorScanner: AR is not available; skipping the floor scan.");
-            m_Hint.text = lineUnavailable;
+            m_Hint.text = L("scan.unavailable");
             m_UseButton.gameObject.SetActive(false);
             yield return new WaitForSecondsRealtime(2f);
             Result = new FloorResult { outcome = Outcome.Unavailable, secondsToFindFloor = -1f };
@@ -287,6 +282,7 @@ namespace PostureCheck
             img.transform.SetParent(go.transform, false);
             var image = img.GetComponent<Image>();
             image.raycastTarget = false;
+            var floorMarker = AppConfig.LoadContentImage(AppConfig.Current.assets.floorMarker);
             if (floorMarker != null)
                 image.sprite = Sprite.Create(floorMarker, new Rect(0, 0, floorMarker.width, floorMarker.height), new Vector2(0.5f, 0.5f));
             else
@@ -306,9 +302,9 @@ namespace PostureCheck
             // Aiming ring in the centre: the spot under it is the one that gets chosen.
             Ui.Panel(root, "Reticle", new Vector2(0.5f, 0.5f), new Vector2(24, 24), Color.white);
 
-            var skip = Ui.Button(root, "Skip", "Skip", new Vector2(0.25f, 0.08f), new Vector2(400, 140));
+            var skip = Ui.Button(root, "Skip", L("scan.skip"), new Vector2(0.25f, 0.08f), new Vector2(400, 140));
             skip.onClick.AddListener(() => m_Choice = Outcome.Skipped);
-            m_UseButton = Ui.Button(root, "UseSpot", "Use this spot", new Vector2(0.72f, 0.08f), new Vector2(520, 140));
+            m_UseButton = Ui.Button(root, "UseSpot", L("scan.useSpot"), new Vector2(0.72f, 0.08f), new Vector2(520, 140));
             m_UseButton.onClick.AddListener(() => m_Choice = Outcome.Found);
             m_UseButton.interactable = false;
         }

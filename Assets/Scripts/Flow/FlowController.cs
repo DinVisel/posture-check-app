@@ -4,13 +4,12 @@ using UnityEngine;
 namespace PostureCheck
 {
     /// <summary>
-    /// Runs the check's states in order: floor scan (back camera) → turn the phone → setup (hints
-    /// until the whole body is in view, star on the floor) → front scan (posture line).
-    /// Step 1.8 adds the start screen.
+    /// Runs the check's states in order: start screen → floor scan (back camera) → turn the phone →
+    /// setup (hints until the whole body is in view, star on the floor) → front scan (posture line).
     /// </summary>
     public class FlowController : MonoBehaviour
     {
-        public enum State { FloorScan, TurnPhone, Setup, ScanFront }
+        public enum State { Start, FloorScan, TurnPhone, Setup, ScanFront }
 
         [SerializeField] FloorScanner floorScanner;
         [SerializeField] TurnTracker turnTracker;
@@ -18,17 +17,13 @@ namespace PostureCheck
         [SerializeField] Measure measure;
         [SerializeField] FloorStar floorStar;
         [SerializeField] Mascot mascot;
+        [SerializeField] StartScreen startScreen;
         [Tooltip("The scene camera; switched off while the AR camera draws the back camera image.")]
         [SerializeField] Camera sceneCamera;
         [Tooltip("Editor only: go straight to the front camera (for testing pose and overlay on a webcam).")]
         [SerializeField] bool skipFloorScanInEditor;
 
-        // Text lines from config.json ("setup.*"); step 1.8 reads them from the file.
-        [SerializeField] string lineStepIn = "Step in front of the camera.";
-        [SerializeField] string lineStepBack = "Step back";
-        [SerializeField] string lineMoveLeft = "Move left";
-        [SerializeField] string lineMoveRight = "Move right";
-        [SerializeField] string lineStandOnStar = "Stand on the star!";
+        static string L(string key) => AppConfig.Current.Line(key);
 
         public State Current { get; private set; }
         /// <summary>The scanned floor in the front camera's view; not valid if the scan was skipped.</summary>
@@ -38,6 +33,11 @@ namespace PostureCheck
         {
             // Portrait only, so the back and front camera views and the sensors share the same axes.
             Screen.orientation = ScreenOrientation.Portrait;
+
+            Current = State.Start;
+            mascot.SetVisible(true);
+            mascot.Say(L("start.greeting"));
+            yield return startScreen.Run();
             mascot.SetVisible(false);
 
             bool scan = !(Application.isEditor && skipFloorScanInEditor);
@@ -63,7 +63,7 @@ namespace PostureCheck
                 // Setup until the whole body is in view; back to setup if the child leaves the view.
                 Current = measure.BodyInView ? State.ScanFront : State.Setup;
                 mascot.Say(Current == State.Setup ? HintLine(measure.Hint)
-                         : floorStar.Visible && !floorStar.FeetOnStar ? lineStandOnStar
+                         : floorStar.Visible && !floorStar.FeetOnStar ? L("setup.standOnStar")
                          : null);
                 yield return null;
             }
@@ -71,11 +71,11 @@ namespace PostureCheck
 
         string HintLine(Measure.SetupHint hint) => hint switch
         {
-            Measure.SetupHint.StepBack => lineStepBack,
-            Measure.SetupHint.MoveLeft => lineMoveLeft,
-            Measure.SetupHint.MoveRight => lineMoveRight,
-            Measure.SetupHint.None => floorStar.Visible ? lineStandOnStar : null,
-            _ => lineStepIn,
+            Measure.SetupHint.StepBack => L("setup.stepBack"),
+            Measure.SetupHint.MoveLeft => L("setup.moveLeft"),
+            Measure.SetupHint.MoveRight => L("setup.moveRight"),
+            Measure.SetupHint.None => floorStar.Visible ? L("setup.standOnStar") : null,
+            _ => L("setup.stepIn"),
         };
     }
 }

@@ -88,10 +88,17 @@ The order follows plan section 7: get the risky parts working on real phones fir
 - **Done:** hints stop within 2 s of the body being fully in view; the star is under the feet at 2 m and 3 m.
 
 ### 1.8 Config, placeholders, start screen, mascot
-- `config.json` + `AppConfig.cs`; `Assets/Content` with placeholder mascot (grey circle) and star.
+- `config.json` + `AppConfig.cs`; `Assets/StreamingAssets/Content` with placeholder mascot (grey circle) and star.
 - Start screen with "Start check"; mascot speech bubble with lines per state.
 - `FlowController.cs` wires all five states.
 - **Done:** swapping mascot image, colours and names needs no code change.
+
+## Testing in the Editor (no phone)
+
+- Play mode uses **XR Simulation** (a simulated room) for the floor scan: hold the right mouse button and use WASD to move, aim the centre dot at the floor.
+- The turn step has no sensors in the Editor: tap **Continue**. The star is then placed as if the phone turned exactly 180° and stands upright.
+- `FlowController` → **Skip Floor Scan In Editor** goes straight to the webcam.
+- Text lines, colours, names and images: `Assets/StreamingAssets/config.json` and `Assets/StreamingAssets/Content/`.
 
 ## Done when (plan section 2)
 

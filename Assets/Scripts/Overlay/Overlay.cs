@@ -13,8 +13,7 @@ namespace PostureCheck
     {
         [SerializeField] FrontCamera frontCamera;
         [SerializeField] PoseSmoother pose;
-        [SerializeField] Color lineColor = Color.white;
-        [SerializeField] Color outOfRangeColor = new(1f, 0.55f, 0f);
+        Color lineColor, outOfRangeColor; // from config.json "colors"
         [Range(0, 1)] [SerializeField] float minVisibility = 0.5f;
         [Tooltip("Line thickness as a fraction of the screen's short side.")]
         [SerializeField] float thickness = 0.012f;
@@ -42,6 +41,8 @@ namespace PostureCheck
 
         void Start()
         {
+            lineColor = AppConfig.Current.PostureLineColor;
+            outOfRangeColor = AppConfig.Current.PostureLineOutOfRangeColor;
             var canvasGo = new GameObject("OverlayCanvas", typeof(Canvas));
             canvasGo.transform.SetParent(transform, false);
             var canvas = canvasGo.GetComponent<Canvas>();

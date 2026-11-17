@@ -36,8 +36,6 @@ namespace PostureCheck
         [Tooltip("Measured turns further than this from 180° are ignored and 180° is assumed.")]
         [SerializeField] float maxTurnErrorDeg = 45f;
 
-        [SerializeField] string lineTurn = "Turn the phone around and put it here, screen facing the room.";
-        [SerializeField] string lineContinue = "Continue";
 
         public FloorInFront Floor { get; private set; }
         /// <summary>Measured turn about the vertical, degrees (counter-clockwise seen from above). NaN without a gyroscope.</summary>
@@ -121,7 +119,7 @@ namespace PostureCheck
             var root = canvas.transform;
             Ui.Panel(root, "Background", new Vector2(0.5f, 0.5f), new Vector2(4000, 4000), new Color(0.12f, 0.12f, 0.12f));
             var text = Ui.Text(root, "Instruction", new Vector2(0.5f, 0.75f), new Vector2(900, 400), 60);
-            text.text = lineTurn;
+            text.text = AppConfig.Current.Line("turn.instruction");
 
             // Placeholder "turn around" arrow: a U-turn made of bars.
             var arrow = new GameObject("Arrow", typeof(RectTransform)).transform;
@@ -133,7 +131,7 @@ namespace PostureCheck
             Bar(arrow, new Vector2(85, -40), new Vector2(24, 110), 45);     // arrow head
             Bar(arrow, new Vector2(155, -40), new Vector2(24, 110), -45);
 
-            var button = Ui.Button(root, "Continue", lineContinue, new Vector2(0.5f, 0.12f), new Vector2(520, 140));
+            var button = Ui.Button(root, "Continue", AppConfig.Current.Line("turn.continue"), new Vector2(0.5f, 0.12f), new Vector2(520, 140));
             button.onClick.AddListener(() => m_Continue = true);
             return canvas;
         }

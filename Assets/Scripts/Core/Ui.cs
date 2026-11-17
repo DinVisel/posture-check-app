@@ -59,7 +59,7 @@ namespace PostureCheck
             var go = new GameObject(name, typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             var image = go.GetComponent<Image>();
-            image.color = new Color(0.62f, 0.62f, 0.62f); // config "ui" colour, until step 1.8 reads it
+            image.color = AppConfig.Current.UiColor;
             Place(image.rectTransform, anchor, size);
             var text = Text(go.transform, "Label", new Vector2(0.5f, 0.5f), size, 48);
             text.text = label;

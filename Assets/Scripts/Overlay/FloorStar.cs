@@ -17,7 +17,6 @@ namespace PostureCheck
         [SerializeField] FrontCamera frontCamera;
         [SerializeField] PoseSmoother pose;
         [SerializeField] FlowController flow;
-        [SerializeField] Texture2D floorMarker;
         [Tooltip("Star width on the floor, metres.")]
         [SerializeField] float starSize = 0.5f;
         [Tooltip("Ankles closer than this to the star (metres, along the floor) pull the star under them.")]
@@ -39,8 +38,6 @@ namespace PostureCheck
         float m_FallbackWidth;
         bool m_HasFallback;
 
-        public Texture2D FloorMarker { get => floorMarker; set { floorMarker = value; if (m_Graphic) m_Graphic.texture = value; } }
-
         void Start()
         {
             var canvasGo = new GameObject("StarCanvas", typeof(Canvas));
@@ -53,7 +50,7 @@ namespace PostureCheck
             go.transform.SetParent(canvasGo.transform, false);
             m_Graphic = go.AddComponent<StarGraphic>();
             m_Graphic.raycastTarget = false;
-            m_Graphic.texture = floorMarker;
+            m_Graphic.texture = AppConfig.LoadContentImage(AppConfig.Current.assets.floorMarker);
             var rt = m_Graphic.rectTransform;
             rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.zero; // local coordinates = screen pixels
         }

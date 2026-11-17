@@ -4,20 +4,16 @@ using UnityEngine.UI;
 namespace PostureCheck
 {
     /// <summary>
-    /// The mascot: an image in the bottom corner with a speech bubble. Phase 1 placeholder:
+    /// The mascot: an image (config "assets.mascotIdle") in the bottom corner with a speech bubble. Phase 1 placeholder:
     /// no voice and no animation, just the image and the text line for the current state.
     /// </summary>
     public class Mascot : MonoBehaviour
     {
-        [SerializeField] Texture2D image;
-
         Canvas m_Canvas;
         RawImage m_Image;
         Image m_Bubble;
         Text m_Text;
         string m_Line;
-
-        public Texture2D Image { get => image; set { image = value; if (m_Image) m_Image.texture = value; } }
 
         void Awake()
         {
@@ -27,7 +23,7 @@ namespace PostureCheck
             var imgGo = new GameObject("MascotImage", typeof(RawImage));
             imgGo.transform.SetParent(root, false);
             m_Image = imgGo.GetComponent<RawImage>();
-            m_Image.texture = image;
+            m_Image.texture = AppConfig.LoadContentImage(AppConfig.Current.assets.mascotIdle);
             m_Image.raycastTarget = false;
             var rt = m_Image.rectTransform;
             rt.anchorMin = rt.anchorMax = rt.pivot = Vector2.zero;

@@ -19,7 +19,7 @@ public static class SceneWiring
     static readonly System.Type[] Components =
         { typeof(FrontCamera), typeof(PoseTracker), typeof(PoseSmoother), typeof(Overlay), typeof(Measure), typeof(PoseDebugView),
           typeof(FloorScanner), typeof(TurnTracker), typeof(FloorStar), typeof(Mascot),
-          typeof(FlowController) };
+          typeof(StartScreen), typeof(FlowController) };
 
     static SceneWiring()
     {
@@ -70,6 +70,7 @@ public static class SceneWiring
         var turn = GetOrAdd<TurnTracker>(app);
         var star = GetOrAdd<FloorStar>(app);
         var mascot = GetOrAdd<Mascot>(app);
+        var startScreen = GetOrAdd<StartScreen>(app);
         var flow = GetOrAdd<FlowController>(app);
 
         Set(cam, "uprightBlitShader", Load<Shader>("Assets/Shaders/UprightBlit.shader"));
@@ -94,19 +95,16 @@ public static class SceneWiring
         Set(debug, "poseTracker", pose);
         Set(debug, "measure", measure);
 
-        Set(scanner, "floorMarker", Load<Texture2D>("Assets/Content/floor_marker.png"));
-
         Set(flow, "floorScanner", scanner);
         Set(flow, "turnTracker", turn);
         Set(flow, "measure", measure);
         Set(flow, "floorStar", star);
         Set(flow, "mascot", mascot);
+        Set(flow, "startScreen", startScreen);
 
         Set(star, "frontCamera", cam);
         Set(star, "pose", smoother);
         Set(star, "flow", flow);
-        Set(star, "floorMarker", Load<Texture2D>("Assets/Content/floor_marker.png"));
-        Set(mascot, "image", Load<Texture2D>("Assets/Content/mascot_idle.png"));
         Set(flow, "frontCamera", cam);
         var sceneCamera = Camera.main != null ? Camera.main : Object.FindAnyObjectByType<Camera>();
         Set(flow, "sceneCamera", sceneCamera);

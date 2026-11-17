@@ -86,7 +86,7 @@ The XR Interaction Toolkit is not used: it handles controller and hand input in 
 | Front camera | `WebCamTexture`, front-facing, mirrored | Yes |
 | Body tracking | Unity Inference Engine (formerly Sentis) running BlazePose, 33 landmarks per frame (same numbering as MediaPipe). Fallback: MediaPipe Unity Plugin | Yes |
 | Config | `StreamingAssets/config.json`: app name, mascot name, colours, text lines, thresholds, camera field of view | Yes |
-| Assets | `Assets/Content` folder the design team fills; code loads by file name | Yes, with placeholders |
+| Assets | `Assets/StreamingAssets/Content` folder the design team fills; code loads by file name | Yes, with placeholders |
 | Builds | Android APK shared directly; iPhone through Xcode on the Mac, TestFlight for testers | Yes |
 | Sound and voice | Audio files from the design team, Unity `AudioSource` | No |
 | Saving results | JSON file in the app's data folder, angles and dates only | No |

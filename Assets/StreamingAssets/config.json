@@ -9,16 +9,23 @@
   },
 
   "assets": {
+    "_note": "Image files in StreamingAssets/Content. Replace a file with the same name, or change the name here.",
     "mascotIdle": "mascot_idle.png",
     "floorMarker": "floor_marker.png"
   },
 
   "lines": {
     "start.greeting": "Hi! I'm {mascot}. Let's check how you stand!",
+    "start.button": "Start check",
     "scan.pointAtFloor": "Point the camera at the floor where your child will stand.",
     "scan.noFloor": "Point at the floor in a lit area.",
     "scan.found": "Floor found!",
+    "scan.useSpot": "Use this spot",
+    "scan.skip": "Skip",
+    "scan.unavailable": "Floor scan is not available on this phone. Skipping it.",
     "turn.instruction": "Turn the phone around and put it here, screen facing the room.",
+    "turn.continue": "Continue",
+    "setup.stepIn": "Step in front of the camera.",
     "setup.stepBack": "Step back",
     "setup.moveLeft": "Move left",
     "setup.moveRight": "Move right",

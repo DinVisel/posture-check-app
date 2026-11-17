@@ -112,12 +112,12 @@ public static class ProjectSetup
 
     static void Folders()
     {
-        foreach (var d in new[] { "Assets/Scripts", "Assets/Content", "Assets/StreamingAssets" })
+        foreach (var d in new[] { "Assets/Scripts", "Assets/StreamingAssets/Content" })
             Directory.CreateDirectory(d);
 
         // Placeholders the design team replaces (same file names = no code change).
-        WritePlaceholder("Assets/Content/mascot_idle.png", 512, new Color(0.6f, 0.6f, 0.6f), Circle);
-        WritePlaceholder("Assets/Content/floor_marker.png", 512, new Color(1f, 0.85f, 0.2f), Star);
+        WritePlaceholder("Assets/StreamingAssets/Content/mascot_idle.png", 512, new Color(0.6f, 0.6f, 0.6f), Circle);
+        WritePlaceholder("Assets/StreamingAssets/Content/floor_marker.png", 512, new Color(1f, 0.85f, 0.2f), Star);
         AssetDatabase.Refresh();
     }
 
