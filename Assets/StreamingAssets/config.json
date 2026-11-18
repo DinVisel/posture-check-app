@@ -29,15 +29,32 @@
     "setup.stepBack": "Step back",
     "setup.moveLeft": "Move left",
     "setup.moveRight": "Move right",
-    "setup.standOnStar": "Stand on the star!"
+    "setup.standOnStar": "Stand on the star!",
+    "front.holdStill": "Stand still like a statue!",
+    "front.tryAgain": "Oops, you moved! Let's try once more.",
+    "front.done": "Great job!"
   },
 
   "thresholds": {
     "_note": "Placeholder values, not clinically checked.",
     "shoulderTiltDeg": 3.0,
     "shoulderTiltMarginDeg": 0.5,
+    "hipTiltDeg": 3.0,
+    "hipTiltMarginDeg": 0.5,
+    "_kneeNote": "Knee bend in the front view: positive = knee towards the middle (knock-knee), negative = outwards (bow-leg).",
+    "kneeMinDeg": -8.0,
+    "kneeMaxDeg": 8.0,
     "smoothingSeconds": 0.5,
     "minVisibility": 0.6
+  },
+
+  "measurement": {
+    "_note": "Each value is the median over a still window. stillTolerance is a fraction of torso length.",
+    "stillWindowSeconds": 2.0,
+    "stillTolerance": 0.06,
+    "tryTimeoutSeconds": 10.0,
+    "maxTries": 2,
+    "minValidFraction": 0.6
   },
 
   "camera": {

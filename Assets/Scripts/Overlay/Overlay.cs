@@ -20,6 +20,8 @@ namespace PostureCheck
 
         /// <summary>Set by the measurement step: colours the shoulder line orange.</summary>
         public bool ShoulderOutOfRange { get; set; }
+        /// <summary>Set by the measurement step: colours the hip line orange.</summary>
+        public bool HipOutOfRange { get; set; }
 
         struct Point
         {
@@ -76,6 +78,7 @@ namespace PostureCheck
             float width = thickness * Mathf.Min(Screen.width, Screen.height);
             float dot = width * 1.8f;
             var shoulderColor = ShoulderOutOfRange ? outOfRangeColor : lineColor;
+            var hipColor = HipOutOfRange ? outOfRangeColor : lineColor;
 
             var head = P(BodyPoint.Nose);
             var lShoulder = P(BodyPoint.LeftShoulder);
@@ -90,7 +93,7 @@ namespace PostureCheck
             Line(m_Torso, shoulderMid, hipMid, width, lineColor);
             Line(m_Legs, hipMid, ankleMid, width, lineColor);
             Line(m_Shoulders, lShoulder, rShoulder, width, shoulderColor);
-            Line(m_Hips, lHip, rHip, width, lineColor);
+            Line(m_Hips, lHip, rHip, width, hipColor);
 
             Dot(m_HeadDot, head, dot, lineColor);
             Dot(m_ShoulderMidDot, shoulderMid, dot, lineColor);
@@ -98,8 +101,8 @@ namespace PostureCheck
             Dot(m_AnkleMidDot, ankleMid, dot, lineColor);
             Dot(m_LShoulderDot, lShoulder, dot, shoulderColor);
             Dot(m_RShoulderDot, rShoulder, dot, shoulderColor);
-            Dot(m_LHipDot, lHip, dot, lineColor);
-            Dot(m_RHipDot, rHip, dot, lineColor);
+            Dot(m_LHipDot, lHip, dot, hipColor);
+            Dot(m_RHipDot, rHip, dot, hipColor);
         }
 
         Point P(BodyPoint p)

@@ -37,8 +37,28 @@ namespace PostureCheck
         {
             public float shoulderTiltDeg = 3f;
             public float shoulderTiltMarginDeg = 0.5f;
+            public float hipTiltDeg = 3f;
+            public float hipTiltMarginDeg = 0.5f;
+            /// <summary>Knee bend range in the front view (positive = knock-knee, negative = bow-leg); outside it is flagged.</summary>
+            public float kneeMinDeg = -8f;
+            public float kneeMaxDeg = 8f;
             public float smoothingSeconds = 0.5f;
             public float minVisibility = 0.6f;
+        }
+
+        [Serializable]
+        public class MeasurementSettings
+        {
+            /// <summary>A value is the median over this many seconds of standing still.</summary>
+            public float stillWindowSeconds = 2f;
+            /// <summary>Still = no watched point moves more than this fraction of the torso length.</summary>
+            public float stillTolerance = 0.06f;
+            /// <summary>Active seconds one try may take before it counts as failed.</summary>
+            public float tryTimeoutSeconds = 10f;
+            /// <summary>After this many failed tries the missing values become "could not measure".</summary>
+            public int maxTries = 2;
+            /// <summary>Share of frames in the window where a value must be measurable.</summary>
+            public float minValidFraction = 0.6f;
         }
 
         [Serializable]
@@ -53,6 +73,7 @@ namespace PostureCheck
         public ColorSettings colors = new();
         public AssetSettings assets = new();
         public ThresholdSettings thresholds = new();
+        public MeasurementSettings measurement = new();
         public CameraSettings camera = new();
 
         // JsonUtility cannot read a dictionary, so "lines" is parsed separately.
@@ -75,6 +96,9 @@ namespace PostureCheck
             ["setup.moveLeft"] = "Move left",
             ["setup.moveRight"] = "Move right",
             ["setup.standOnStar"] = "Stand on the star!",
+            ["front.holdStill"] = "Stand still like a statue!",
+            ["front.tryAgain"] = "Oops, you moved! Let's try once more.",
+            ["front.done"] = "Great job!",
         };
 
         static AppConfig s_Current;

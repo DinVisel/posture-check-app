@@ -59,7 +59,7 @@ namespace PostureCheck
             rt.anchorMax = new Vector2(1, 1);
             rt.pivot = new Vector2(0, 1);
             rt.anchoredPosition = new Vector2(24, -48);
-            rt.sizeDelta = new Vector2(-48, Screen.height * 0.25f);
+            rt.sizeDelta = new Vector2(-48, Screen.height * 0.45f);
         }
 
         void Update()
@@ -99,7 +99,28 @@ namespace PostureCheck
                 (measure == null ? "" :
                     "\nShoulder tilt: " +(measure.Valid ? $"{measure.TiltDeg:+0.0;-0.0}°" + (measure.OutOfRange ? " OUT OF RANGE" : "") : "shoulders not visible") +
                     $"  (down from {measure.DownSource})" +
-                    $"\nBody: {(measure.BodyInView ? "in view" : "not in view")}, hint {measure.Hint}\n{measure.BodyDebug}");
+                    $"  hip: " + (measure.Hips.Valid ? $"{measure.Hips.Deg:+0.0;-0.0}°" + (measure.Hips.OutOfRange ? " OUT" : "") : "-") +
+                    $"\nKnee bend L {Raw(MeasureKind.KneeLeft)}  R {Raw(MeasureKind.KneeRight)}" +
+                    $"\nBody: {(measure.BodyInView ? "in view" : "not in view")}, hint {measure.Hint}\n{measure.BodyDebug}" +
+                    SessionText());
+        }
+
+        string Raw(MeasureKind kind)
+        {
+            float v = measure.Raw[(int)kind];
+            return float.IsNaN(v) ? "-" : $"{v:+0.0;-0.0}°";
+        }
+
+        string SessionText()
+        {
+            var s = measure != null ? measure.Session : null;
+            if (s == null) return "";
+            var sb = new System.Text.StringBuilder("\nCheck: ");
+            sb.Append(s.Done ? "done" : measure.SessionPaused ? "paused" :
+                $"try {s.FailedTries + 1} {s.TryTime:0}s, still {s.WindowProgress:P0}");
+            foreach (var kind in s.Kinds)
+                sb.Append($"\n  {kind}: " + (s.Results.TryGetValue(kind, out var v) ? v.ToString() : "..."));
+            return sb.ToString();
         }
     }
 }

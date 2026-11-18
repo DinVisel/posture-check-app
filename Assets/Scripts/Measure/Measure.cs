@@ -4,11 +4,12 @@ using UnityEngine.InputSystem;
 namespace PostureCheck
 {
     /// <summary>
-    /// Measures shoulder tilt: the angle of the line between the shoulders (landmarks 11 and 12)
-    /// from true horizontal. "Horizontal" comes from the phone's gravity sensor, so a slightly
-    /// tilted phone does not count as a tilted child; in the Editor the screen's horizontal is used.
-    /// The angle is smoothed over ~0.5 s and only measured when both shoulders are clearly visible.
-    /// Out of range uses hysteresis: on above the threshold, off only below threshold − margin.
+    /// Per-frame body measurements and the whole-body check.
+    /// Live (Phase 1): shoulder and hip tilt against true horizontal (gravity sensor; screen horizontal
+    /// in the Editor), smoothed over ~0.5 s, with hysteresis to colour the lines orange.
+    /// Check (Phase 2): every pose frame's raw values feed the running <see cref="MeasureSession"/>,
+    /// which turns them into medians over a still window. A value is used only when its landmarks
+    /// are visible above the threshold.
     /// </summary>
     public class Measure : MonoBehaviour
     {
@@ -16,13 +17,50 @@ namespace PostureCheck
         [SerializeField] PoseSmoother pose;
         [SerializeField] Overlay overlay;
 
+        /// <summary>Smoothed live angle with on/off hysteresis.</summary>
+        public class LiveTilt
+        {
+            public bool Valid { get; private set; }
+            public float Deg { get; private set; }
+            public bool OutOfRange { get; private set; }
+            bool m_Has;
+
+            public void Update(float raw, float dt, float smoothing, float threshold, float margin)
+            {
+                Valid = !float.IsNaN(raw);
+                if (!Valid)
+                {
+                    m_Has = false;
+                    OutOfRange = false;
+                    return;
+                }
+                float k = !m_Has || smoothing <= 0f ? 1f : 1f - Mathf.Exp(-dt / smoothing);
+                Deg = Mathf.Lerp(Deg, raw, k);
+                m_Has = true;
+                float abs = Mathf.Abs(Deg);
+                if (OutOfRange) { if (abs < threshold - margin) OutOfRange = false; }
+                else if (abs > threshold) OutOfRange = true;
+            }
+        }
+
+        public LiveTilt Shoulders { get; } = new();
+        public LiveTilt Hips { get; } = new();
+
         /// <summary>True while both shoulders are visible enough to measure.</summary>
-        public bool Valid { get; private set; }
+        public bool Valid => Shoulders.Valid;
         /// <summary>Smoothed shoulder tilt in degrees; positive = the person's left shoulder is higher.</summary>
-        public float TiltDeg { get; private set; }
-        public bool OutOfRange { get; private set; }
+        public float TiltDeg => Shoulders.Deg;
+        public bool OutOfRange => Shoulders.OutOfRange;
         /// <summary>Where "down" comes from: "gravity", "accelerometer" or "screen" (no sensor).</summary>
         public string DownSource { get; private set; } = "screen";
+
+        /// <summary>Latest raw (unsmoothed) value per <see cref="MeasureKind"/>; NaN = not measurable this frame.</summary>
+        public float[] Raw { get; } = NewNaNs(System.Enum.GetValues(typeof(MeasureKind)).Length);
+
+        /// <summary>The running check session, if any. Fed with every new pose frame.</summary>
+        public MeasureSession Session { get; private set; }
+        /// <summary>Set by the flow: the session ignores frames (and its timers stop) while true.</summary>
+        public bool SessionPaused { get; set; }
 
         public enum SetupHint { None, StepIn, StepBack, MoveLeft, MoveRight }
 
@@ -45,9 +83,30 @@ namespace PostureCheck
         float m_InViewTimer, m_HintTimer;
 
         int m_LastVersion = -1;
-        float m_LastTime;
-        bool m_HasSmoothed;
+        float m_LastTime = -1f;
         Vector2 m_Down = Vector2.down;
+
+        // Points watched for movement during a still window.
+        static readonly BodyPoint[] StillPoints =
+        {
+            BodyPoint.Nose, BodyPoint.LeftShoulder, BodyPoint.RightShoulder, BodyPoint.LeftHip, BodyPoint.RightHip,
+            BodyPoint.LeftKnee, BodyPoint.RightKnee, BodyPoint.LeftAnkle, BodyPoint.RightAnkle,
+        };
+        readonly Vector2[] m_StillPoints = new Vector2[StillPoints.Length];
+
+        static float[] NewNaNs(int n)
+        {
+            var a = new float[n];
+            for (int i = 0; i < n; i++) a[i] = float.NaN;
+            return a;
+        }
+
+        /// <summary>Starts a new check session for these values (replaces any running one).</summary>
+        public MeasureSession BeginSession(params MeasureKind[] kinds)
+        {
+            Session = new MeasureSession(kinds, AppConfig.Current.measurement);
+            return Session;
+        }
 
         void OnEnable()
         {
@@ -63,46 +122,84 @@ namespace PostureCheck
             if (pose.Version == m_LastVersion) return;
             m_LastVersion = pose.Version;
 
-            var t = AppConfig.Current.thresholds;
-            var left = pose[BodyPoint.LeftShoulder];
-            var right = pose[BodyPoint.RightShoulder];
-            Valid = pose.HasPose && frontCamera.Frame != null &&
-                    left.visibility >= t.minVisibility && right.visibility >= t.minVisibility;
-
-            if (!Valid)
-            {
-                m_HasSmoothed = false;
-                OutOfRange = false;
-                overlay.ShoulderOutOfRange = false;
-                return;
-            }
-
-            // Screen space, so the angle matches what the user sees (mirroring does not change heights).
-            var l = frontCamera.FrameToScreen(left.position);
-            var r = frontCamera.FrameToScreen(right.position);
-            var shoulders = l - r;
-            if (shoulders.sqrMagnitude < 1f) return;
-            float rise = Vector2.Dot(shoulders, -m_Down);
-            float tilt = Mathf.Asin(Mathf.Clamp(rise / shoulders.magnitude, -1f, 1f)) * Mathf.Rad2Deg;
-
             float now = Time.realtimeSinceStartup;
-            if (!m_HasSmoothed)
-            {
-                TiltDeg = tilt;
-                m_HasSmoothed = true;
-            }
-            else
-            {
-                float dt = now - m_LastTime;
-                float k = t.smoothingSeconds > 0f ? 1f - Mathf.Exp(-dt / t.smoothingSeconds) : 1f;
-                TiltDeg = Mathf.Lerp(TiltDeg, tilt, k);
-            }
+            float dt = m_LastTime < 0f ? 0f : now - m_LastTime;
             m_LastTime = now;
 
-            float abs = Mathf.Abs(TiltDeg);
-            if (OutOfRange) { if (abs < t.shoulderTiltDeg - t.shoulderTiltMarginDeg) OutOfRange = false; }
-            else if (abs > t.shoulderTiltDeg) OutOfRange = true;
-            overlay.ShoulderOutOfRange = OutOfRange;
+            var t = AppConfig.Current.thresholds;
+            bool hasPose = pose.HasPose && frontCamera.Frame != null;
+            for (int i = 0; i < Raw.Length; i++) Raw[i] = float.NaN;
+            if (hasPose)
+            {
+                float minVis = t.minVisibility;
+                Raw[(int)MeasureKind.ShoulderTilt] = Tilt(BodyPoint.LeftShoulder, BodyPoint.RightShoulder, minVis);
+                Raw[(int)MeasureKind.HipTilt] = Tilt(BodyPoint.LeftHip, BodyPoint.RightHip, minVis);
+                Raw[(int)MeasureKind.KneeLeft] = Knee(BodyPoint.LeftHip, BodyPoint.LeftKnee, BodyPoint.LeftAnkle, BodyPoint.RightHip, minVis);
+                Raw[(int)MeasureKind.KneeRight] = Knee(BodyPoint.RightHip, BodyPoint.RightKnee, BodyPoint.RightAnkle, BodyPoint.LeftHip, minVis);
+            }
+
+            Shoulders.Update(Raw[(int)MeasureKind.ShoulderTilt], dt, t.smoothingSeconds, t.shoulderTiltDeg, t.shoulderTiltMarginDeg);
+            Hips.Update(Raw[(int)MeasureKind.HipTilt], dt, t.smoothingSeconds, t.hipTiltDeg, t.hipTiltMarginDeg);
+            overlay.ShoulderOutOfRange = Shoulders.OutOfRange;
+            overlay.HipOutOfRange = Hips.OutOfRange;
+
+            if (Session != null && !Session.Done)
+            {
+                float torso = hasPose ? TorsoLength(t.minVisibility) : 0f;
+                for (int i = 0; i < StillPoints.Length; i++)
+                {
+                    var lm = hasPose ? pose[StillPoints[i]] : default;
+                    m_StillPoints[i] = hasPose && lm.visibility >= t.minVisibility
+                        ? frontCamera.FrameToScreen(lm.position)
+                        : new Vector2(float.NaN, float.NaN);
+                }
+                Session.Add(now, m_StillPoints, torso, Raw, SessionPaused || !hasPose);
+            }
+        }
+
+        Vector2 S(BodyPoint p) => frontCamera.FrameToScreen(pose[p].position);
+        bool Visible(BodyPoint p, float minVis) => pose[p].visibility >= minVis;
+
+        /// <summary>Angle of the line from the right point to the left point against true horizontal; positive = left higher.</summary>
+        float Tilt(BodyPoint left, BodyPoint right, float minVis)
+        {
+            if (!Visible(left, minVis) || !Visible(right, minVis)) return float.NaN;
+            // Screen space, so the angle matches what the user sees (mirroring does not change heights).
+            var v = S(left) - S(right);
+            if (v.sqrMagnitude < 1f) return float.NaN;
+            float rise = Vector2.Dot(v, -m_Down);
+            return Mathf.Asin(Mathf.Clamp(rise / v.magnitude, -1f, 1f)) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>
+        /// Front-view knee bend: 180° minus the hip-knee-ankle angle. Positive when the knee sits on the
+        /// body's midline side of the hip-ankle line (knock-knee), negative when outside (bow-leg).
+        /// </summary>
+        float Knee(BodyPoint hip, BodyPoint knee, BodyPoint ankle, BodyPoint otherHip, float minVis)
+        {
+            if (!Visible(hip, minVis) || !Visible(knee, minVis) || !Visible(ankle, minVis) || !Visible(otherHip, minVis))
+                return float.NaN;
+            Vector2 h = S(hip), k = S(knee), a = S(ankle), o = S(otherHip);
+            Vector2 up = h - k, down = a - k;
+            if (up.sqrMagnitude < 1f || down.sqrMagnitude < 1f) return float.NaN;
+            float bend = 180f - Vector2.Angle(up, down);
+            var axis = a - h;
+            float kneeSide = Cross(axis, k - h);
+            float midSide = Cross(axis, o - h);
+            if (Mathf.Abs(midSide) < 1e-3f) return float.NaN;
+            return Mathf.Sign(kneeSide) == Mathf.Sign(midSide) ? bend : -bend;
+        }
+
+        static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
+
+        /// <summary>Screen distance from mid-shoulders to mid-hips; 0 if not visible.</summary>
+        float TorsoLength(float minVis)
+        {
+            if (!Visible(BodyPoint.LeftShoulder, minVis) || !Visible(BodyPoint.RightShoulder, minVis) ||
+                !Visible(BodyPoint.LeftHip, minVis) || !Visible(BodyPoint.RightHip, minVis)) return 0f;
+            var shoulders = (S(BodyPoint.LeftShoulder) + S(BodyPoint.RightShoulder)) * 0.5f;
+            var hips = (S(BodyPoint.LeftHip) + S(BodyPoint.RightHip)) * 0.5f;
+            return Vector2.Distance(shoulders, hips);
         }
 
         /// <summary>
