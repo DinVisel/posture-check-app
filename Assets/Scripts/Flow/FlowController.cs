@@ -6,11 +6,11 @@ namespace PostureCheck
     /// <summary>
     /// Runs the check's states in order: start screen → floor scan (back camera) → turn the phone →
     /// setup (hints until the whole body is in view, star on the floor) → front scan (posture line,
-    /// front measurements over a still window).
+    /// front measurements over a still window) → side scan (turn sideways, head forward) → done.
     /// </summary>
     public class FlowController : MonoBehaviour
     {
-        public enum State { Start, FloorScan, TurnPhone, Setup, ScanFront }
+        public enum State { Start, FloorScan, TurnPhone, Setup, ScanFront, ScanSide, Done }
 
         [SerializeField] FloorScanner floorScanner;
         [SerializeField] TurnTracker turnTracker;
@@ -29,6 +29,9 @@ namespace PostureCheck
 
         static readonly MeasureKind[] FrontKinds =
             { MeasureKind.ShoulderTilt, MeasureKind.HipTilt, MeasureKind.KneeLeft, MeasureKind.KneeRight };
+        static readonly MeasureKind[] SideKinds = { MeasureKind.HeadForward };
+
+        float m_StarWait;
 
         static string L(string key) => AppConfig.Current.Line(key);
 
@@ -69,38 +72,53 @@ namespace PostureCheck
 
             frontCamera.Begin();
             mascot.SetVisible(true);
-            yield return RunFrontScan();
+            // Front: the child stands still on the star.
+            yield return RunScan(State.ScanFront, FrontKinds, FrontNotReady, "front", giveUpSeconds: 0f);
 
-            // Side view, poses and walking come next (Phase 2 steps 2.3–2.6); until then the live line stays on.
+            // Side: the child turns sideways and stands still.
+            measure.SideView = true;
+            yield return RunScan(State.ScanSide, SideKinds, SideNotReady, "side",
+                                 AppConfig.Current.measurement.sideTurnTimeoutSeconds);
+            LogResults();
+
+            // Guided poses and walking come next (Phase 2 steps 2.4–2.6); until then the live line stays on.
             while (true)
             {
-                Current = measure.BodyInView ? State.ScanFront : State.Setup;
-                mascot.Say(Current == State.Setup ? HintLine(measure.Hint) : L("front.done"));
+                Current = measure.BodyInView ? State.Done : State.Setup;
+                mascot.Say(Current == State.Setup ? HintLine(measure.Hint) : L("side.done"));
                 yield return null;
             }
         }
 
         /// <summary>
-        /// Setup hints until the whole body is in view, then the front measurements: the child stands
-        /// still on the star until every value has a median or is "could not measure". Leaving the view
-        /// goes back to setup and pauses the measuring.
+        /// One measuring step: setup hints until the whole body is in view, then <paramref name="notReady"/>'s
+        /// line until the child is in place (null = ready), then hold still until every value has a median
+        /// or is "could not measure". Leaving the view or the position pauses the measuring.
+        /// Lines come from "<paramref name="lines"/>.holdStill" and "<paramref name="lines"/>.tryAgain".
+        /// If the child is in view but not in place for <paramref name="giveUpSeconds"/> in total (0 = never),
+        /// the missing values become "could not measure".
         /// </summary>
-        IEnumerator RunFrontScan()
+        IEnumerator RunScan(State state, MeasureKind[] kinds, System.Func<string> notReady, string lines, float giveUpSeconds)
         {
             MeasureSession session = null;
-            float starWait = 0f, tryAgainUntil = 0f;
+            float tryAgainUntil = 0f, notReadyTime = 0f;
             int seenFails = 0;
             while (session == null || !session.Done)
             {
                 bool inView = measure.BodyInView;
-                bool offStar = floorStar.Visible && !floorStar.FeetOnStar;
-                if (inView && offStar) starWait += Time.deltaTime;
-                // Wait for the child to stand on the star, but not forever: the star may be a little off.
-                bool waitForStar = offStar && starWait < starWaitSeconds;
-
-                Current = inView ? State.ScanFront : State.Setup;
-                if (inView && session == null) session = measure.BeginSession(FrontKinds);
-                measure.SessionPaused = !inView || waitForStar;
+                string block = inView ? notReady() : null;
+                Current = inView ? state : State.Setup;
+                if (block != null)
+                {
+                    notReadyTime += Time.deltaTime;
+                    if (giveUpSeconds > 0f && notReadyTime >= giveUpSeconds)
+                    {
+                        Debug.Log($"Flow: {state} gave up waiting for the child to get in place");
+                        break;
+                    }
+                }
+                if (inView && block == null && session == null) session = measure.BeginSession(kinds);
+                measure.SessionPaused = !inView || block != null;
 
                 if (session != null && session.FailedTries > seenFails)
                 {
@@ -109,17 +127,30 @@ namespace PostureCheck
                 }
 
                 mascot.Say(!inView ? HintLine(measure.Hint)
-                         : waitForStar ? L("setup.standOnStar")
-                         : Time.time < tryAgainUntil ? L("front.tryAgain")
-                         : L("front.holdStill"));
+                         : block ?? (Time.time < tryAgainUntil ? L(lines + ".tryAgain") : L(lines + ".holdStill")));
                 yield return null;
             }
 
-            foreach (var kv in session.Results) m_Results[kv.Key] = kv.Value;
+            foreach (var kind in kinds)
+                m_Results[kind] = session != null && session.Results.TryGetValue(kind, out var v) ? v : MeasureValue.CouldNotMeasure;
+        }
+
+        /// <summary>Front scan: wait for the child to stand on the star, but not forever, since the star may be a little off.</summary>
+        string FrontNotReady()
+        {
+            if (!floorStar.Visible || floorStar.FeetOnStar) return null;
+            m_StarWait += Time.deltaTime;
+            return m_StarWait < starWaitSeconds ? L("setup.standOnStar") : null;
+        }
+
+        string SideNotReady() => measure.IsSideways ? null : L("side.turn");
+
+        void LogResults()
+        {
             var t = AppConfig.Current.thresholds;
-            var log = new System.Text.StringBuilder("Flow: front scan done");
-            foreach (var kv in session.Results)
-                log.Append($", {kv.Key} {kv.Value}{(kv.Value.IsFlagged(kv.Key, t) ? " (flag)" : "")}");
+            var log = new System.Text.StringBuilder("Flow: check results");
+            foreach (var kv in m_Results)
+                log.Append($", {kv.Key} {kv.Value.Format(kv.Key)}{(kv.Value.IsFlagged(kv.Key, t) ? " (flag)" : "")}");
             Debug.Log(log.ToString());
         }
 

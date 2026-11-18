@@ -13,7 +13,7 @@ The app is built in three phases. Each phase leaves a working app, and each buil
 | Phase | Status |
 | --- | --- |
 | 1 Prototype | In progress: all steps (1.1–1.8) written; Android build works; waiting for design assets; iPhone build and the phone checklist pending |
-| 2 Core check | In progress: 2.1 measurement engine and 2.2 front measurements written, untested |
+| 2 Core check | In progress: 2.1 measurement engine, 2.2 front measurements and 2.3 side view written, untested |
 | 3 Full app | Not started |
 
 ## Ground rules (all phases)

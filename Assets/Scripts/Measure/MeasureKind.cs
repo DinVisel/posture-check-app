@@ -11,6 +11,8 @@ namespace PostureCheck
         KneeLeft,
         /// <summary>Same as <see cref="KneeLeft"/> for the right leg.</summary>
         KneeRight,
+        /// <summary>Side view: how far the ear sits in front of the shoulder (horizontally), divided by torso length. Positive = forward.</summary>
+        HeadForward,
     }
 
     /// <summary>One measurement result: a value, or "could not measure" (never a guess).</summary>
@@ -38,10 +40,17 @@ namespace PostureCheck
                 case MeasureKind.HipTilt: return System.Math.Abs(value) > t.hipTiltDeg;
                 case MeasureKind.KneeLeft:
                 case MeasureKind.KneeRight: return value < t.kneeMinDeg || value > t.kneeMaxDeg;
+                case MeasureKind.HeadForward: return value > t.headForwardMax;
                 default: return false;
             }
         }
 
-        public override string ToString() => measured ? $"{value:+0.0;-0.0}°" : "could not measure";
+        /// <summary>The value with its unit: degrees, or a ratio of torso length for head forward.</summary>
+        public string Format(MeasureKind kind) => !measured ? "could not measure" : Format(kind, value);
+
+        public static string Format(MeasureKind kind, float value) =>
+            float.IsNaN(value) ? "-" : kind == MeasureKind.HeadForward ? $"{value:+0.00;-0.00}" : $"{value:+0.0;-0.0}°";
+
+        public override string ToString() => measured ? value.ToString("0.00") : "could not measure";
     }
 }

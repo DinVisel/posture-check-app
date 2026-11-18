@@ -42,6 +42,9 @@ namespace PostureCheck
             /// <summary>Knee bend range in the front view (positive = knock-knee, negative = bow-leg); outside it is flagged.</summary>
             public float kneeMinDeg = -8f;
             public float kneeMaxDeg = 8f;
+            /// <summary>Head forward (ear in front of shoulder ÷ torso length) above this is flagged.</summary>
+            public float headForwardMax = 0.15f;
+            public float headForwardMargin = 0.02f;
             public float smoothingSeconds = 0.5f;
             public float minVisibility = 0.6f;
         }
@@ -59,6 +62,10 @@ namespace PostureCheck
             public int maxTries = 2;
             /// <summary>Share of frames in the window where a value must be measurable.</summary>
             public float minValidFraction = 0.6f;
+            /// <summary>Sideways = shoulder width on screen below this fraction of torso length (front view is about 0.7–0.9).</summary>
+            public float sideMaxShoulderRatio = 0.35f;
+            /// <summary>In-view seconds to wait for the child to turn sideways before giving up on the side view.</summary>
+            public float sideTurnTimeoutSeconds = 20f;
         }
 
         [Serializable]
@@ -99,6 +106,10 @@ namespace PostureCheck
             ["front.holdStill"] = "Stand still like a statue!",
             ["front.tryAgain"] = "Oops, you moved! Let's try once more.",
             ["front.done"] = "Great job!",
+            ["side.turn"] = "Now turn sideways, like you are walking past me!",
+            ["side.holdStill"] = "Stand still and look straight ahead!",
+            ["side.tryAgain"] = "Oops, you moved! Let's try once more.",
+            ["side.done"] = "Super! All done for now.",
         };
 
         static AppConfig s_Current;

@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 namespace PostureCheck
 {
     /// <summary>
-    /// Per-frame body measurements and the whole-body check.
+    /// Per-frame body measurements, the whole-body check and the sideways check.
     /// Live (Phase 1): shoulder and hip tilt against true horizontal (gravity sensor; screen horizontal
     /// in the Editor), smoothed over ~0.5 s, with hysteresis to colour the lines orange.
     /// Check (Phase 2): every pose frame's raw values feed the running <see cref="MeasureSession"/>,
@@ -45,6 +45,24 @@ namespace PostureCheck
 
         public LiveTilt Shoulders { get; } = new();
         public LiveTilt Hips { get; } = new();
+        /// <summary>Live head-forward ratio (side view only); out of range when the head is too far forward.</summary>
+        public LiveTilt Head { get; } = new();
+
+        /// <summary>
+        /// Set by the flow for the side scan: the body check then needs only one ankle, the front lines
+        /// stop colouring, and head forward is measured on the side facing the camera.
+        /// </summary>
+        public bool SideView { get; set; }
+        /// <summary>True while the child stands sideways to the camera (settled).</summary>
+        public bool IsSideways { get; private set; }
+        /// <summary>Shoulder width on screen ÷ torso length; small when sideways. NaN if unknown.</summary>
+        public float ShoulderRatio { get; private set; } = float.NaN;
+        /// <summary>The ear and shoulder on the side facing the camera (side view).</summary>
+        public BodyPoint NearEar { get; private set; } = BodyPoint.LeftEar;
+        public BodyPoint NearShoulder { get; private set; } = BodyPoint.LeftShoulder;
+        BodyPoint m_NearHip = BodyPoint.LeftHip;
+        bool m_RawSideways;
+        float m_SidewaysTimer;
 
         /// <summary>True while both shoulders are visible enough to measure.</summary>
         public bool Valid => Shoulders.Valid;
@@ -137,11 +155,22 @@ namespace PostureCheck
                 Raw[(int)MeasureKind.KneeLeft] = Knee(BodyPoint.LeftHip, BodyPoint.LeftKnee, BodyPoint.LeftAnkle, BodyPoint.RightHip, minVis);
                 Raw[(int)MeasureKind.KneeRight] = Knee(BodyPoint.RightHip, BodyPoint.RightKnee, BodyPoint.RightAnkle, BodyPoint.LeftHip, minVis);
             }
+            UpdateSide(hasPose, dt, minVis: t.minVisibility);
+            if (SideView && IsSideways) Raw[(int)MeasureKind.HeadForward] = HeadForward(t.minVisibility);
 
             Shoulders.Update(Raw[(int)MeasureKind.ShoulderTilt], dt, t.smoothingSeconds, t.shoulderTiltDeg, t.shoulderTiltMarginDeg);
             Hips.Update(Raw[(int)MeasureKind.HipTilt], dt, t.smoothingSeconds, t.hipTiltDeg, t.hipTiltMarginDeg);
-            overlay.ShoulderOutOfRange = Shoulders.OutOfRange;
-            overlay.HipOutOfRange = Hips.OutOfRange;
+            // Only forward counts: a head held back is not what this flags.
+            float head = Raw[(int)MeasureKind.HeadForward];
+            Head.Update(float.IsNaN(head) ? head : Mathf.Max(head, 0f), dt, t.smoothingSeconds, t.headForwardMax, t.headForwardMargin);
+
+            // Side on, the shoulder and hip lines shrink to a point and their angles are noise.
+            overlay.ShoulderOutOfRange = !SideView && Shoulders.OutOfRange;
+            overlay.HipOutOfRange = !SideView && Hips.OutOfRange;
+            overlay.SideView = SideView;
+            overlay.NearEar = NearEar;
+            overlay.NearShoulder = NearShoulder;
+            overlay.HeadOutOfRange = SideView && Head.OutOfRange;
 
             if (Session != null && !Session.Done)
             {
@@ -192,6 +221,60 @@ namespace PostureCheck
 
         static float Cross(Vector2 a, Vector2 b) => a.x * b.y - a.y * b.x;
 
+        /// <summary>
+        /// Sideways check and near side. Seen from the side the two shoulders overlap, so their on-screen
+        /// distance is small next to the torso length. The side facing the camera is the one whose ear and
+        /// shoulder the model sees best.
+        /// </summary>
+        void UpdateSide(bool hasPose, float dt, float minVis)
+        {
+            bool raw = false;
+            ShoulderRatio = float.NaN;
+            if (hasPose)
+            {
+                float left = pose[BodyPoint.LeftEar].visibility + pose[BodyPoint.LeftShoulder].visibility;
+                float right = pose[BodyPoint.RightEar].visibility + pose[BodyPoint.RightShoulder].visibility;
+                bool useLeft = left >= right;
+                NearEar = useLeft ? BodyPoint.LeftEar : BodyPoint.RightEar;
+                NearShoulder = useLeft ? BodyPoint.LeftShoulder : BodyPoint.RightShoulder;
+                m_NearHip = useLeft ? BodyPoint.LeftHip : BodyPoint.RightHip;
+
+                if (Visible(NearShoulder, minVis) && Visible(m_NearHip, minVis))
+                {
+                    // Positions of the far side are still predicted when hidden, which is all this needs.
+                    var shoulders = S(BodyPoint.LeftShoulder) - S(BodyPoint.RightShoulder);
+                    var mids = (S(BodyPoint.LeftShoulder) + S(BodyPoint.RightShoulder)) * 0.5f -
+                               (S(BodyPoint.LeftHip) + S(BodyPoint.RightHip)) * 0.5f;
+                    if (mids.sqrMagnitude > 1f)
+                    {
+                        ShoulderRatio = shoulders.magnitude / mids.magnitude;
+                        raw = ShoulderRatio < AppConfig.Current.measurement.sideMaxShoulderRatio;
+                    }
+                }
+            }
+
+            m_SidewaysTimer = raw == m_RawSideways ? m_SidewaysTimer + dt : 0f;
+            m_RawSideways = raw;
+            if (m_SidewaysTimer >= bodySettleSeconds) IsSideways = raw;
+        }
+
+        /// <summary>
+        /// Side view: the near ear's distance in front of the near shoulder along true horizontal, divided by
+        /// the shoulder-hip distance. "In front" is the way the nose points.
+        /// </summary>
+        float HeadForward(float minVis)
+        {
+            if (!Visible(NearEar, minVis) || !Visible(NearShoulder, minVis) || !Visible(m_NearHip, minVis) ||
+                !Visible(BodyPoint.Nose, minVis)) return float.NaN;
+            var horizontal = new Vector2(-m_Down.y, m_Down.x);
+            Vector2 ear = S(NearEar), shoulder = S(NearShoulder);
+            float facing = Vector2.Dot(S(BodyPoint.Nose) - ear, horizontal);
+            if (Mathf.Abs(facing) < 1f) return float.NaN;
+            float torso = Vector2.Distance(shoulder, S(m_NearHip));
+            if (torso < 1f) return float.NaN;
+            return Vector2.Dot(ear - shoulder, horizontal) * Mathf.Sign(facing) / torso;
+        }
+
         /// <summary>Screen distance from mid-shoulders to mid-hips; 0 if not visible.</summary>
         float TorsoLength(float minVis)
         {
@@ -203,7 +286,7 @@ namespace PostureCheck
         }
 
         /// <summary>
-        /// Whole-body check: nose (0) and both ankles (27, 28) visible and inside the visible screen
+        /// Whole-body check: nose (0) and both ankles (27, 28; one in the side view) visible and inside the visible screen
         /// area. Hints use screen positions, which are already mirrored: a child shown on the left of
         /// the screen is on their own left, so they are told to move right.
         /// </summary>
@@ -229,7 +312,8 @@ namespace PostureCheck
                 bool nose = OnScreen(BodyPoint.Nose, "nose");
                 bool leftAnkle = OnScreen(BodyPoint.LeftAnkle, "L ankle");
                 bool rightAnkle = OnScreen(BodyPoint.RightAnkle, "R ankle");
-                inView = nose && leftAnkle && rightAnkle;
+                // Side on, the far ankle is often hidden behind the near leg.
+                inView = nose && (SideView ? leftAnkle || rightAnkle : leftAnkle && rightAnkle);
                 BodyDebug = debug.ToString();
 
                 var hips = (frontCamera.FrameToScreen(pose[BodyPoint.LeftHip].position) +

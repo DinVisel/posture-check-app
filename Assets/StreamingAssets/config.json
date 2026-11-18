@@ -32,7 +32,11 @@
     "setup.standOnStar": "Stand on the star!",
     "front.holdStill": "Stand still like a statue!",
     "front.tryAgain": "Oops, you moved! Let's try once more.",
-    "front.done": "Great job!"
+    "front.done": "Great job!",
+    "side.turn": "Now turn sideways, like you are walking past me!",
+    "side.holdStill": "Stand still and look straight ahead!",
+    "side.tryAgain": "Oops, you moved! Let's try once more.",
+    "side.done": "Super! All done for now."
   },
 
   "thresholds": {
@@ -44,6 +48,9 @@
     "_kneeNote": "Knee bend in the front view: positive = knee towards the middle (knock-knee), negative = outwards (bow-leg).",
     "kneeMinDeg": -8.0,
     "kneeMaxDeg": 8.0,
+    "_headNote": "Head forward: ear's horizontal distance in front of the shoulder divided by torso length (side view).",
+    "headForwardMax": 0.15,
+    "headForwardMargin": 0.02,
     "smoothingSeconds": 0.5,
     "minVisibility": 0.6
   },
@@ -54,7 +61,10 @@
     "stillTolerance": 0.06,
     "tryTimeoutSeconds": 10.0,
     "maxTries": 2,
-    "minValidFraction": 0.6
+    "minValidFraction": 0.6,
+    "_sideNote": "Sideways when shoulder width on screen is below this fraction of torso length.",
+    "sideMaxShoulderRatio": 0.35,
+    "sideTurnTimeoutSeconds": 20.0
   },
 
   "camera": {

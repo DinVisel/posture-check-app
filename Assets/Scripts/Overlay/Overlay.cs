@@ -22,6 +22,12 @@ namespace PostureCheck
         public bool ShoulderOutOfRange { get; set; }
         /// <summary>Set by the measurement step: colours the hip line orange.</summary>
         public bool HipOutOfRange { get; set; }
+        /// <summary>Side view: draw ear → shoulder on the near side instead of the shoulder and hip lines.</summary>
+        public bool SideView { get; set; }
+        public BodyPoint NearEar { get; set; } = BodyPoint.LeftEar;
+        public BodyPoint NearShoulder { get; set; } = BodyPoint.LeftShoulder;
+        /// <summary>Side view: colours the ear-shoulder line orange.</summary>
+        public bool HeadOutOfRange { get; set; }
 
         struct Point
         {
@@ -35,7 +41,7 @@ namespace PostureCheck
             public Image image;
         }
 
-        Shape m_Neck, m_Torso, m_Legs, m_Shoulders, m_Hips;
+        Shape m_Neck, m_Torso, m_Legs, m_Shoulders, m_Hips, m_EarLine, m_EarDot;
         Shape m_HeadDot, m_ShoulderMidDot, m_HipMidDot, m_AnkleMidDot;
         Shape m_LShoulderDot, m_RShoulderDot, m_LHipDot, m_RHipDot;
         Transform m_Root;
@@ -59,6 +65,8 @@ namespace PostureCheck
             m_Legs = NewShape("Legs", null);
             m_Shoulders = NewShape("ShoulderLine", null);
             m_Hips = NewShape("HipLine", null);
+            m_EarLine = NewShape("EarLine", null);
+            m_EarDot = NewShape("Ear", m_Circle);
             m_HeadDot = NewShape("Head", m_Circle);
             m_ShoulderMidDot = NewShape("ShoulderMid", m_Circle);
             m_HipMidDot = NewShape("HipMid", m_Circle);
@@ -89,6 +97,23 @@ namespace PostureCheck
             var hipMid = Mid(lHip, rHip);
             var ankleMid = Mid(P(BodyPoint.LeftAnkle), P(BodyPoint.RightAnkle));
 
+            if (SideView)
+            {
+                // Side on: ear → near shoulder shows the head position; the near shoulder anchors the torso.
+                var ear = P(NearEar);
+                var nearShoulder = P(NearShoulder);
+                var headColor = HeadOutOfRange ? outOfRangeColor : lineColor;
+                Hide(m_Neck, m_Shoulders, m_Hips, m_HeadDot, m_ShoulderMidDot, m_LShoulderDot, m_RShoulderDot, m_LHipDot, m_RHipDot);
+                Line(m_EarLine, ear, nearShoulder, width, headColor);
+                Line(m_Torso, nearShoulder, hipMid, width, lineColor);
+                Line(m_Legs, hipMid, ankleMid, width, lineColor);
+                Dot(m_EarDot, ear, dot, headColor);
+                Dot(m_HipMidDot, hipMid, dot, lineColor);
+                Dot(m_AnkleMidDot, ankleMid, dot, lineColor);
+                return;
+            }
+
+            Hide(m_EarLine, m_EarDot);
             Line(m_Neck, head, shoulderMid, width, lineColor);
             Line(m_Torso, shoulderMid, hipMid, width, lineColor);
             Line(m_Legs, hipMid, ankleMid, width, lineColor);
@@ -103,6 +128,11 @@ namespace PostureCheck
             Dot(m_RShoulderDot, rShoulder, dot, shoulderColor);
             Dot(m_LHipDot, lHip, dot, hipColor);
             Dot(m_RHipDot, rHip, dot, hipColor);
+        }
+
+        static void Hide(params Shape[] shapes)
+        {
+            foreach (var s in shapes) s.image.enabled = false;
         }
 
         Point P(BodyPoint p)

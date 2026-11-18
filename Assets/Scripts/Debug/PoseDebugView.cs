@@ -101,14 +101,16 @@ namespace PostureCheck
                     $"  (down from {measure.DownSource})" +
                     $"  hip: " + (measure.Hips.Valid ? $"{measure.Hips.Deg:+0.0;-0.0}°" + (measure.Hips.OutOfRange ? " OUT" : "") : "-") +
                     $"\nKnee bend L {Raw(MeasureKind.KneeLeft)}  R {Raw(MeasureKind.KneeRight)}" +
+                    $"\nSide: {(measure.SideView ? "on" : "off")}, shoulder ratio {measure.ShoulderRatio:0.00}" +
+                    $"{(measure.IsSideways ? " SIDEWAYS" : "")}, near {measure.NearEar}, head fwd {Raw(MeasureKind.HeadForward)}" +
+                    (measure.Head.OutOfRange ? " OUT" : "") +
                     $"\nBody: {(measure.BodyInView ? "in view" : "not in view")}, hint {measure.Hint}\n{measure.BodyDebug}" +
                     SessionText());
         }
 
         string Raw(MeasureKind kind)
         {
-            float v = measure.Raw[(int)kind];
-            return float.IsNaN(v) ? "-" : $"{v:+0.0;-0.0}°";
+            return MeasureValue.Format(kind, measure.Raw[(int)kind]);
         }
 
         string SessionText()
@@ -119,7 +121,7 @@ namespace PostureCheck
             sb.Append(s.Done ? "done" : measure.SessionPaused ? "paused" :
                 $"try {s.FailedTries + 1} {s.TryTime:0}s, still {s.WindowProgress:P0}");
             foreach (var kind in s.Kinds)
-                sb.Append($"\n  {kind}: " + (s.Results.TryGetValue(kind, out var v) ? v.ToString() : "..."));
+                sb.Append($"\n  {kind}: " + (s.Results.TryGetValue(kind, out var v) ? v.Format(kind) : "..."));
             return sb.ToString();
         }
     }
